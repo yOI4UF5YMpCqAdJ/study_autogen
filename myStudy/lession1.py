@@ -47,6 +47,7 @@ async def MultAITeam():
     team = RoundRobinGroupChat([writer,critic],termination,10)
     await Console(team.run_stream(task="写一个吸引人的热点话题，字数在100字内"))
     # team.run()
+    #1
 
 '''人机交互'''
 async def HumenInLoop():
