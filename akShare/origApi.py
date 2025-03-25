@@ -12,4 +12,4 @@ def getReport():
     print(stock_yjbb_em_df)
 
 if __name__ == "__main__":
-    process_preReport_data(force_recreate=True)
+   getReport()

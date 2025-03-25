@@ -5,15 +5,15 @@ from datetime import datetime
 # 添加项目根目录到Python路径
 sys.path.append(os.path.join(os.path.dirname(__file__), "../.."))
 from db.db_manager import db_manager
-from db_preReport import (update_header_status, check_existing_query, 
-                         delete_preReport_detail_by_date, insert_preReport_data)
+from db_report import (update_header_status, check_existing_query, 
+                      delete_report_detail_by_date, insert_report_data)
 
-def check_tables(date="20250331"):
+def check_tables(date="20220331"):
     """
     检查头表和数据表是否存在
     
     参数:
-        date: str, 查询参数日期，格式为YYYYMMDD，默认为20250331
+        date: str, 查询参数日期，格式为YYYYMMDD，默认为20220331
     
     返回:
         tuple: (header_table_exists, detail_table_exists)
@@ -28,10 +28,10 @@ def check_tables(date="20250331"):
             
         # 检查表是否存在
         print("\n检查表是否存在...")
-        db_manager.execute("SHOW TABLES LIKE 'stock_prereport_header'")
+        db_manager.execute("SHOW TABLES LIKE 'stock_report_header'")
         header_table_exists = db_manager.fetchone() is not None
         
-        db_manager.execute("SHOW TABLES LIKE 'stock_preReport'")
+        db_manager.execute("SHOW TABLES LIKE 'stock_report'")
         detail_table_exists = db_manager.fetchone() is not None
         
         print(f"头表存在: {header_table_exists}, 数据表存在: {detail_table_exists}")
@@ -46,38 +46,38 @@ def check_tables(date="20250331"):
         print(f"检查表时发生错误: {e}")
         return False, False
 
-def process_preReport_data(date="20250331"):
+def process_report_data(date="20220331"):
     """
-    主函数：调用ak.stock_yjyg_em函数，当返回有数据时：
+    主函数：调用ak.stock_yjbb_em函数，当返回有数据时：
     1. 检查表是否存在
     2. 将数据插入到表中
     3. 更新头表状态
     
     参数:
-        date: str, 业绩预告日期，格式为"YYYYMMDD"
+        date: str, 业绩报告日期，格式为"YYYYMMDD"
         
     返回:
         bool: 表示操作是否成功
     """
     try:
-        print("开始处理股票业绩预告数据...")
+        print("开始处理股票业绩报告数据...")
         
         # 调用akshare函数获取数据
-        stock_yjyg_em_df = ak.stock_yjyg_em(date=date)
+        stock_yjbb_em_df = ak.stock_yjbb_em(date=date)
         
         # 检查是否有数据返回
-        if stock_yjyg_em_df.empty:
+        if stock_yjbb_em_df.empty:
             print("没有获取到数据，请检查日期参数或稍后再试")
             return False
         
-        print(f"成功获取到{len(stock_yjyg_em_df)}条业绩预告数据")
+        print(f"成功获取到{len(stock_yjbb_em_df)}条业绩报告数据")
         
         # 检查是否存在相同查询参数的记录
         has_existing_query = check_existing_query(date)
         
         if has_existing_query:
             print("\n发现相同日期参数的记录，将删除对应的子表数据")
-            if not delete_preReport_detail_by_date(date):
+            if not delete_report_detail_by_date(date):
                 print("删除子表数据失败，终止数据处理")
                 return False
         
@@ -97,7 +97,7 @@ def process_preReport_data(date="20250331"):
             
         # 检查头表是否已存在该日期的记录
         check_sql = """
-        SELECT 1 FROM stock_prereport_header 
+        SELECT 1 FROM stock_report_header 
         WHERE report_date = %s
         """
         db_manager.execute(check_sql, (date,))
@@ -106,7 +106,7 @@ def process_preReport_data(date="20250331"):
         # 如果记录不存在，则插入
         if not exists:
             db_manager.execute("""
-                INSERT INTO stock_prereport_header 
+                INSERT INTO stock_report_header 
                 (report_date, query_param, status) 
                 VALUES (%s, %s, %s)
             """, (date, f"date={date}", "PENDING"))
@@ -114,14 +114,14 @@ def process_preReport_data(date="20250331"):
         else:
             # 如果记录存在，更新状态为PENDING
             db_manager.execute("""
-                UPDATE stock_prereport_header 
+                UPDATE stock_report_header 
                 SET status = 'PENDING'
                 WHERE report_date = %s
             """, (date,))
             db_manager.commit()
         
-        # 插入预告数据
-        success, insert_count = insert_preReport_data(stock_yjyg_em_df, date)
+        # 插入报告数据
+        success, insert_count = insert_report_data(stock_yjbb_em_df, date)
         if not success:
             print("插入数据失败，终止数据处理")
             # 更新头表状态为失败
@@ -135,9 +135,9 @@ def process_preReport_data(date="20250331"):
             print("警告: 更新头表状态失败，但数据处理已完成")
         
         # 展示表结构
-        print("\n表 stock_preReport 的结构：")
+        print("\n表 stock_report 的结构：")
         db_manager.connect()
-        db_manager.execute("DESCRIBE stock_preReport")
+        db_manager.execute("DESCRIBE stock_report")
         for field in db_manager.fetchall():
             print(field)
         
@@ -152,5 +152,4 @@ def process_preReport_data(date="20250331"):
         return False
 
 if __name__ == "__main__":
-    process_preReport_data(date="20200630")
-# 20200630
+    process_report_data(date="20220331")
