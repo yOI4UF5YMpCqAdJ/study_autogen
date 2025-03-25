@@ -18,3 +18,9 @@ preReport 调用ak.stock_yjyg_em，当返回有数据时，
     
     <!-- stock_prereport，stock_prereport_header，stock_report_header，stock_report， -->
 帮我单独创建一个文件位于db文件夹下，名字叫initDb. 检查数据库中是否存在db_report和db_preReport 中涉及的几张表，没有的话就调用这两个文件的创建函数创建表
+
+1. initData.py  写一段代码帮我生成一组数据列表。数据的格式是年月日。要求是年从2014年到2100年。月日是每年的3月31日,6月30日,9月30日,12月31日。根据这个规则生成数据。然后导入到数据表stock_period的period字段中。使用db_manager访问数据库
+
+1. 我有个xxljob,我想把main_preReport和main_report 每天去运行一下，怎么做？
+
+1. 调用
