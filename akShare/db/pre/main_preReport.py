@@ -152,5 +152,5 @@ def process_preReport_data(date="20250331"):
         return False
 
 if __name__ == "__main__":
-    process_preReport_data(date="20200630")
+    process_preReport_data(date="20200930")
 # 20200630

@@ -59,18 +59,19 @@ def create_stock_report_table(stock_yjbb_em_df=None, report_date=None, force_rec
             stock_code VARCHAR(10) COMMENT '股票代码',
             stock_name VARCHAR(50) COMMENT '股票简称',
             basic_eps DECIMAL(20,4) COMMENT '每股收益',
-            diluted_eps DECIMAL(20,4) COMMENT '每股收益-摊薄',
-            revenue DECIMAL(20,2) COMMENT '营业收入',
-            revenue_yoy DECIMAL(10,2) COMMENT '营业收入同比增长',
+            diluted_eps DECIMAL(20,4) COMMENT '每股收益(同basic_eps)',
+            revenue DECIMAL(20,2) COMMENT '营业总收入',
+            revenue_yoy DECIMAL(10,2) COMMENT '营业总收入同比增长',
+            revenue_qoq DECIMAL(10,2) COMMENT '营业总收入季度环比增长',
             net_profit DECIMAL(20,2) COMMENT '净利润',
             net_profit_yoy DECIMAL(10,2) COMMENT '净利润同比增长',
-            operating_profit DECIMAL(20,2) COMMENT '营业利润',
-            total_assets DECIMAL(20,2) COMMENT '总资产',
-            total_equity DECIMAL(20,2) COMMENT '股东权益',
-            equity_yoy DECIMAL(10,2) COMMENT '股东权益同比增长',
-            cashflow_operating DECIMAL(20,2) COMMENT '经营性现金流',
-            total_liabilities DECIMAL(20,2) COMMENT '总负债',
-            notice_date DATE COMMENT '公告日期',
+            net_profit_qoq DECIMAL(10,2) COMMENT '净利润季度环比增长',
+            net_asset_per_share DECIMAL(20,4) COMMENT '每股净资产',
+            roe DECIMAL(10,2) COMMENT '净资产收益率',
+            cf_per_share DECIMAL(20,4) COMMENT '每股经营现金流量',
+            gross_profit_margin DECIMAL(10,2) COMMENT '销售毛利率',
+            industry VARCHAR(100) COMMENT '所处行业',
+            notice_date DATE COMMENT '最新公告日期',
             create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
             update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
             INDEX idx_report_date (report_date),
@@ -316,24 +317,30 @@ def insert_report_data(stock_yjbb_em_df=None, report_date=None):
             return False, 0
             
         for _, row in stock_yjbb_em_df.iterrows():
+            # 打印原始行数据，查看数据结构
+            print("\n原始行数据:")
+            for col in row.index:
+                print(f"{col}: {row[col]}")
+                
             # 准备插入的数据
             insert_data = {
                 'report_date': report_date,
-                'stock_code': row.get('股票代码', ''),
-                'stock_name': row.get('股票简称', ''),
-                'basic_eps': row.get('每股收益', 0),
-                'diluted_eps': row.get('每股收益-摊薄', 0),
-                'revenue': row.get('营业收入', 0),
-                'revenue_yoy': row.get('营业收入同比增长', 0),
-                'net_profit': row.get('净利润', 0),
-                'net_profit_yoy': row.get('净利润同比增长', 0),
-                'operating_profit': row.get('营业利润', 0),
-                'total_assets': row.get('总资产', 0),
-                'total_equity': row.get('股东权益', 0),
-                'equity_yoy': row.get('股东权益同比增长', 0),
-                'cashflow_operating': row.get('经营性现金流', 0),
-                'total_liabilities': row.get('总负债', 0),
-                'notice_date': row.get('公告日期', None)
+                'stock_code': str(row.get('股票代码', '')),
+                'stock_name': str(row.get('股票简称', '')),
+                'basic_eps': float(row.get('每股收益', None) or 0),
+                'diluted_eps': float(row.get('每股收益', None) or 0),  # 使用相同的每股收益值
+                'revenue': float(row.get('营业总收入-营业总收入', None) or 0),
+                'revenue_yoy': float(row.get('营业总收入-同比增长', None) or 0),
+                'revenue_qoq': float(row.get('营业总收入-季度环比增长', None) or 0),
+                'net_profit': float(row.get('净利润-净利润', None) or 0),
+                'net_profit_yoy': float(row.get('净利润-同比增长', None) or 0),
+                'net_profit_qoq': float(row.get('净利润-季度环比增长', None) or 0),
+                'net_asset_per_share': float(row.get('每股净资产', None) or 0),
+                'roe': float(row.get('净资产收益率', None) or 0),
+                'cf_per_share': float(row.get('每股经营现金流量', None) or 0),
+                'gross_profit_margin': float(row.get('销售毛利率', None) or 0),
+                'industry': str(row.get('所处行业', '')),
+                'notice_date': row.get('最新公告日期', None)
             }
             
             # 处理数值字段中的NaN值

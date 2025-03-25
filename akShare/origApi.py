@@ -8,7 +8,7 @@ def getPreData():
 
 #业绩
 def getReport():
-    stock_yjbb_em_df = ak.stock_yjbb_em(date="20220331")
+    stock_yjbb_em_df = ak.stock_yjbb_em(date="20200930")
     print(stock_yjbb_em_df)
 
 if __name__ == "__main__":

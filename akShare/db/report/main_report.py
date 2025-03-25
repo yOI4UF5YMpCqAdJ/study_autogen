@@ -65,6 +65,7 @@ def process_report_data(date="20220331"):
         # 调用akshare函数获取数据
         stock_yjbb_em_df = ak.stock_yjbb_em(date=date)
         
+        
         # 检查是否有数据返回
         if stock_yjbb_em_df.empty:
             print("没有获取到数据，请检查日期参数或稍后再试")
@@ -152,4 +153,4 @@ def process_report_data(date="20220331"):
         return False
 
 if __name__ == "__main__":
-    process_report_data(date="20220331")
+    process_report_data(date="20200930")
