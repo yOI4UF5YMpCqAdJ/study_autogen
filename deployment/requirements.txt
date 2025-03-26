@@ -1,0 +1,4 @@
+akshare==1.12.22
+pymysql==1.1.0
+python-dotenv==1.0.1
+pandas==2.2.1

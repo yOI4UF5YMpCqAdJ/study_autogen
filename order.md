@@ -26,5 +26,11 @@ preReport 调用ak.stock_yjyg_em，当返回有数据时，
 1. 修改main_preReport逻辑,每次根据入参搜索数据，如果已经存在，不要删除，而是直接取出来，和要写入的数据进行比较，如果写入的数据中在取出的数据中包含，则删除这条写入的数据。全部比较好后，如果写入数据还有剩余，则把这些数据写入到数据库中。
 
 xxljobRun中有一个函数，这个函数做以下任务。
-1. 根据当前时间格式化为年月日%Y%m%d,作为查询写入数据
-2. 
+1. 根据当前时间格式化为年月日%Y%m%d,作为参数。先打印给我看下是否正确，我确认后正确后，再分别调用process_report_data和process_preReport_data 生成数据。
+2. 日期参数修改下，获取当前日期后，需要和3月31日,6月30日,9月30日,12月31日 这几个日期作比较，获取离最近但还没有达到的那个日期
+
+
+执行main_report 报错cannot access local variable 'big_df' where it is not associated with a value
+我调用了F:\miniconda3\envs\autogen\Lib\site-packages\akshare\stock_feature\stock_yjbb_em.py 这个文件里的stock_yjbb_em 这个方法
+
+服务器上创建了虚拟环境kksStock 在虚拟环境中运行xxlJobRun.py，帮我写个Windows脚本来运行这个python.之后我需要在xxljob中去使用
