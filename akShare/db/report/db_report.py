@@ -234,6 +234,62 @@ def delete_report_detail_by_date(date_str):
     finally:
         db_manager.close()
 
+def get_existing_report_data(date_str):
+    """
+    根据报告日期获取已存在的报告数据
+    
+    参数:
+        date_str: str, 报告日期，格式为YYYYMMDD
+        
+    返回:
+        list: 包含已存在数据的列表，每个元素是一个字典
+    """
+    try:
+        if not db_manager.connect():
+            print("数据库连接失败")
+            return []
+            
+        select_sql = """
+        SELECT stock_code, stock_name
+        FROM stock_report 
+        WHERE report_date = %s
+        """
+        db_manager.execute(select_sql, (date_str,))
+        results = db_manager.fetchall()
+        
+        existing_data = []
+        for row in results:
+            data = {
+                'stock_code': row[0],
+                'stock_name': row[1]
+            }
+            existing_data.append(data)
+            
+        return existing_data
+        
+    except Exception as e:
+        print(f"获取已存在数据时发生错误: {e}")
+        return []
+        
+    finally:
+        db_manager.close()
+
+def is_record_exists(new_record, existing_records):
+    """
+    检查新记录是否在已存在的记录中
+    
+    参数:
+        new_record: dict, 新的记录数据
+        existing_records: list, 已存在的记录列表
+    
+    返回:
+        bool: 如果记录已存在返回True，否则返回False
+    """
+    for existing in existing_records:
+        if existing['stock_code'] == new_record['stock_code']:
+            return True
+    return False
+
 def update_header_status(report_date, record_count, status="COMPLETED", remark=None):
     """
     更新头表状态
@@ -317,10 +373,10 @@ def insert_report_data(stock_yjbb_em_df=None, report_date=None):
             return False, 0
             
         for _, row in stock_yjbb_em_df.iterrows():
-            # 打印原始行数据，查看数据结构
-            print("\n原始行数据:")
-            for col in row.index:
-                print(f"{col}: {row[col]}")
+            # # 打印原始行数据，查看数据结构
+            # print("\n原始行数据:")
+            # for col in row.index:
+            #     print(f"{col}: {row[col]}")
                 
             # 准备插入的数据
             insert_data = {

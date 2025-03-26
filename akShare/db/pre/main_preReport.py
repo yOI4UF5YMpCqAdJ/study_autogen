@@ -1,12 +1,12 @@
 import akshare as ak
 import sys
 import os
+import pandas as pd
 from datetime import datetime
 # 添加项目根目录到Python路径
 sys.path.append(os.path.join(os.path.dirname(__file__), "../.."))
 from db.db_manager import db_manager
-from db_preReport import (update_header_status, check_existing_query, 
-                         delete_preReport_detail_by_date, insert_preReport_data)
+from db.pre import db_preReport
 
 def check_tables(date="20250331"):
     """
@@ -72,15 +72,6 @@ def process_preReport_data(date="20250331"):
         
         print(f"成功获取到{len(stock_yjyg_em_df)}条业绩预告数据")
         
-        # 检查是否存在相同查询参数的记录
-        has_existing_query = check_existing_query(date)
-        
-        if has_existing_query:
-            print("\n发现相同日期参数的记录，将删除对应的子表数据")
-            if not delete_preReport_detail_by_date(date):
-                print("删除子表数据失败，终止数据处理")
-                return False
-        
         # 步骤1: 检查必要的表是否存在
         print("\n步骤1: 检查必要的表")
         header_exists, detail_exists = check_tables(date)
@@ -89,7 +80,31 @@ def process_preReport_data(date="20250331"):
             print("必要的表不存在，终止数据处理")
             return False
             
-        print("\n步骤2: 插入数据")
+        print("\n步骤2: 检查并处理已存在的数据")
+        # 获取已存在的数据
+        existing_records = db_preReport.get_existing_preReport_data(date)
+        if existing_records:
+            print(f"发现{len(existing_records)}条已存在的记录，开始数据比对")
+            
+            # 过滤掉已存在的记录
+            filtered_df = stock_yjyg_em_df.copy()
+            filtered_records = []
+            
+            for _, row in filtered_df.iterrows():
+                new_record = {'stock_code': row.get('股票代码', '')}
+                
+                if not db_preReport.is_record_exists(new_record, existing_records):
+                    filtered_records.append(row)
+            
+            if not filtered_records:
+                print("所有新数据都已存在，无需插入")
+                db_preReport.update_header_status(date, len(existing_records), "COMPLETED", "数据已存在，无需更新")
+                return True
+                
+            stock_yjyg_em_df = pd.DataFrame(filtered_records)
+            print(f"过滤后剩余{len(stock_yjyg_em_df)}条新数据需要插入")
+        
+        print("\n步骤3: 插入新数据")
         # 连接数据库并检查头表记录
         if not db_manager.connect():
             print("数据库连接失败")
@@ -121,16 +136,16 @@ def process_preReport_data(date="20250331"):
             db_manager.commit()
         
         # 插入预告数据
-        success, insert_count = insert_preReport_data(stock_yjyg_em_df, date)
+        success, insert_count = db_preReport.insert_preReport_data(stock_yjyg_em_df, date)
         if not success:
             print("插入数据失败，终止数据处理")
             # 更新头表状态为失败
-            update_header_status(date, 0, "FAILED", "插入数据失败")
+            db_preReport.update_header_status(date, 0, "FAILED", "插入数据失败")
             return False
             
         # 更新头表状态
-        print("\n步骤3: 更新头表状态")
-        status_updated = update_header_status(date, insert_count, "COMPLETED", "处理成功")
+        print("\n步骤4: 更新头表状态")
+        status_updated = db_preReport.update_header_status(date, insert_count, "COMPLETED", "处理成功")
         if not status_updated:
             print("警告: 更新头表状态失败，但数据处理已完成")
         
@@ -152,5 +167,5 @@ def process_preReport_data(date="20250331"):
         return False
 
 if __name__ == "__main__":
-    process_preReport_data(date="20200930")
+    process_preReport_data(date="20200630")
 # 20200630

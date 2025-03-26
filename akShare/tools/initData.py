@@ -24,7 +24,7 @@ def init_period_data():
     # 准备SQL语句和参数
     sql = "INSERT INTO stock_period (period) VALUES (%s)"
     # 将日期对象转换为字符串格式
-    date_strings = [(d.strftime('%Y-%m-%d'),) for d in dates]
+    date_strings = [(d.strftime('%Y%m%d'),) for d in dates]
     
     try:
         # 执行批量插入
