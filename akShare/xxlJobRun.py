@@ -5,6 +5,10 @@ from datetime import datetime
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from akShare.db.report.main_report import process_report_data
 from akShare.db.pre.main_preReport import process_preReport_data
+from akShare.log.logger import setup_logger
+
+# 设置日志记录器
+logger = setup_logger('xxlJobRun')
 
 def get_next_quarter_end():
     """
@@ -35,7 +39,7 @@ def get_next_quarter_end():
     # 如果所有季度都已过，返回下一年的第一个季度末
     return f"{year + 1}0331"
 
-def process_daily_report():
+def process_daily_report(date=None):
     """
     处理每日业绩报告和业绩预告数据
     1. 获取最近的季度末日期
@@ -47,44 +51,53 @@ def process_daily_report():
     try:
         # 获取日期参数并打印
         current_date = datetime.now()
-        target_date = get_next_quarter_end()
-        print("\n=== 日期参数 ===")
-        print(f"当前日期: {current_date.strftime('%Y-%m-%d')}")
-        print(f"目标处理日期: {target_date}")
+        target_date = date if date else get_next_quarter_end()
+        logger.info("=== 日期参数 ===")
+        logger.info(f"当前日期: {current_date.strftime('%Y-%m-%d')}")
+        logger.info(f"目标处理日期: {target_date}")
         
         report_result = False
         prereport_result = False
         
         try:
             # 处理业绩报告数据
-            print("\n=== 处理业绩报告数据 ===")
+            logger.info("=== 处理业绩报告数据 ===")
             report_result = process_report_data(date=target_date)
+            # 如果只是没有获取到数据，认为是正常情况
+            if report_result is False:
+                logger.info("业绩报告：没有获取到数据")
+                report_result = True
         except Exception as e:
-            print(f"业绩报告数据处理出错: {e}")
+            logger.error(f"业绩报告数据处理出错: {e}")
             report_result = False
         
         try:
             # 处理业绩预告数据
-            print("\n=== 处理业绩预告数据 ===")
+            logger.info("=== 处理业绩预告数据 ===")
             prereport_result = process_preReport_data(date=target_date)
+            # 如果只是没有获取到数据，认为是正常情况
+            if prereport_result is False:
+                logger.info("业绩预告：没有获取到数据")
+                prereport_result = True
         except Exception as e:
-            print(f"业绩预告数据处理出错: {e}")
+            logger.error(f"业绩预告数据处理出错: {e}")
             prereport_result = False
         
         return report_result, prereport_result
         
     except KeyboardInterrupt:
-        print("\n操作已取消")
+        logger.warning("操作已取消")
         return False, False
     except Exception as e:
-        print(f"处理数据时发生错误: {e}")
+        logger.error(f"处理数据时发生错误: {e}")
         return False, False
 
 if __name__ == "__main__":
-    report_result, prereport_result = process_daily_report()
+    date_param = sys.argv[1] if len(sys.argv) > 1 else None
+    report_result, prereport_result = process_daily_report(date_param)
     # 如果任一处理失败，返回非零退出码
     if not report_result or not prereport_result:
-        print("\n任务执行失败")
+        logger.error("任务执行失败")
         sys.exit(1)
-    print("\n任务执行成功")
+    logger.info("任务已执行")
     sys.exit(0)

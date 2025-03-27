@@ -62,7 +62,7 @@ def create_stock_report_table(stock_yjbb_em_df=None, report_date=None, force_rec
             diluted_eps DECIMAL(20,4) COMMENT '每股收益(同basic_eps)',
             revenue DECIMAL(20,2) COMMENT '营业总收入',
             revenue_yoy DECIMAL(10,2) COMMENT '营业总收入同比增长',
-            revenue_qoq DECIMAL(10,2) COMMENT '营业总收入季度环比增长',
+            revenue_qoq DECIMAL(20,2) COMMENT '营业总收入季度环比增长',
             net_profit DECIMAL(20,2) COMMENT '净利润',
             net_profit_yoy DECIMAL(10,2) COMMENT '净利润同比增长',
             net_profit_qoq DECIMAL(10,2) COMMENT '净利润季度环比增长',

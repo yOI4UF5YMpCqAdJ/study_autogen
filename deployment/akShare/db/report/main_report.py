@@ -2,6 +2,7 @@ import akshare as ak
 import sys
 import os
 import pandas as pd
+import logging
 from datetime import datetime
 # 添加项目根目录到Python路径
 sys.path.append(os.path.join(os.path.dirname(__file__), "../.."))
@@ -23,27 +24,27 @@ def check_tables(date="20220331"):
     try:
         # 连接到数据库
         if not db_manager.connect():
-            print("数据库连接失败")
+            logging.error("数据库连接失败")
             return False, False
             
         # 检查表是否存在
-        print("\n检查表是否存在...")
+        logging.info("检查表是否存在...")
         db_manager.execute("SHOW TABLES LIKE 'stock_report_header'")
         header_table_exists = db_manager.fetchone() is not None
         
         db_manager.execute("SHOW TABLES LIKE 'stock_report'")
         detail_table_exists = db_manager.fetchone() is not None
         
-        print(f"头表存在: {header_table_exists}, 数据表存在: {detail_table_exists}")
+        logging.info(f"头表存在: {header_table_exists}, 数据表存在: {detail_table_exists}")
         
         if not header_table_exists or not detail_table_exists:
-            print("错误：必要的表不存在，请先创建相关表")
+            logging.error("错误：必要的表不存在，请先创建相关表")
             return False, False
             
         return header_table_exists, detail_table_exists
         
     except Exception as e:
-        print(f"检查表时发生错误: {e}")
+        logging.error(f"检查表时发生错误: {e}")
         return False, False
 
 def process_report_data(date="20220331"):
@@ -60,7 +61,7 @@ def process_report_data(date="20220331"):
         bool: 表示操作是否成功
     """
     try:
-        print("开始处理股票业绩报告数据...")
+        logging.info("开始处理股票业绩报告数据...")
         
         # 调用akshare函数获取数据
         stock_yjbb_em_df = ak.stock_yjbb_em(date=date)
@@ -68,24 +69,24 @@ def process_report_data(date="20220331"):
         
         # 检查是否有数据返回
         if stock_yjbb_em_df.empty:
-            print("没有获取到数据，请检查日期参数或稍后再试")
+            logging.info("没有获取到数据，请检查日期参数或稍后再试")
             return False
         
-        print(f"成功获取到{len(stock_yjbb_em_df)}条业绩报告数据")
+        logging.info(f"成功获取到{len(stock_yjbb_em_df)}条业绩报告数据")
         
         # 步骤1: 检查必要的表是否存在
-        print("\n步骤1: 检查必要的表")
+        logging.info("步骤1: 检查必要的表")
         header_exists, detail_exists = check_tables(date)
         
         if not header_exists or not detail_exists:
-            print("必要的表不存在，终止数据处理")
+            logging.error("必要的表不存在，终止数据处理")
             return False
             
-        print("\n步骤2: 检查并处理已存在的数据")
+        logging.info("步骤2: 检查并处理已存在的数据")
         # 获取已存在的数据
         existing_records = db_report.get_existing_report_data(date)
         if existing_records:
-            print(f"发现{len(existing_records)}条已存在的记录，开始数据比对")
+            logging.info(f"发现{len(existing_records)}条已存在的记录，开始数据比对")
             
             # 过滤掉已存在的记录
             filtered_df = stock_yjbb_em_df.copy()
@@ -98,17 +99,17 @@ def process_report_data(date="20220331"):
                     filtered_records.append(row)
             
             if not filtered_records:
-                print("所有新数据都已存在，无需插入")
+                logging.info("所有新数据都已存在，无需插入")
                 db_report.update_header_status(date, len(existing_records), "COMPLETED", "数据已存在，无需更新")
                 return True
                 
             stock_yjbb_em_df = pd.DataFrame(filtered_records)
-            print(f"过滤后剩余{len(stock_yjbb_em_df)}条新数据需要插入")
+            logging.info(f"过滤后剩余{len(stock_yjbb_em_df)}条新数据需要插入")
         
-        print("\n步骤3: 插入新数据")
+        logging.info("步骤3: 插入新数据")
         # 连接数据库并检查头表记录
         if not db_manager.connect():
-            print("数据库连接失败")
+            logging.error("数据库连接失败")
             return False
             
         # 检查头表是否已存在该日期的记录
@@ -139,16 +140,16 @@ def process_report_data(date="20220331"):
         # 插入报告数据
         success, insert_count = db_report.insert_report_data(stock_yjbb_em_df, date)
         if not success:
-            print("插入数据失败，终止数据处理")
+            logging.error("插入数据失败，终止数据处理")
             # 更新头表状态为失败
             db_report.update_header_status(date, 0, "FAILED", "插入数据失败")
             return False
             
         # 更新头表状态
-        print("\n步骤4: 更新头表状态")
+        logging.info("步骤4: 更新头表状态")
         status_updated = db_report.update_header_status(date, insert_count, "COMPLETED", "处理成功")
         if not status_updated:
-            print("警告: 更新头表状态失败，但数据处理已完成")
+            logging.warning("警告: 更新头表状态失败，但数据处理已完成")
         
         # 展示表结构
         # print("\n表 stock_report 的结构：")
@@ -159,11 +160,11 @@ def process_report_data(date="20220331"):
         
         db_manager.close()
         
-        print("\n数据处理完成！")
+        logging.info("数据处理完成！")
         return True
         
     except Exception as e:
-        print(f"处理数据时发生错误: {e}")
+        logging.error(f"处理数据时发生错误: {e}")
         db_manager.close()
         return False
 
