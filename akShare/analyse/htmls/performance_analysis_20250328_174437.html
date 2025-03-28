@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>股票业绩分析报告</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+        .report-dates {
+            text-align: center;
+            color: #7f8c8d;
+            margin: 10px 0;
+            font-size: 1.1em;
+        }
+        .report-dates div {
+            margin: 5px 0;
+        }
+        .section {
+            margin: 20px 0;
+        }
+        .section-title {
+            color: #2c3e50;
+            margin: 15px 0;
+            padding: 10px;
+            background-color: #ecf0f1;
+            border-radius: 4px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 0.95em;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 120px;
+        }
+        th {
+            background-color: #34495e;
+            color: white;
+            font-size: 0.9em;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .positive-change {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        .negative-change {
+            color: #c0392b;
+            font-weight: bold;
+        }
+        .change-reason {
+            max-width: 180px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .change-reason:hover {
+            white-space: normal;
+            overflow: visible;
+        }
+        .small-text {
+            font-size: 0.85em;
+        }
+        .date-info {
+            font-size: 0.55em;
+            font-weight: normal;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>股票业绩分析报告</h1>
+        
+        
+        <div class="section">
+            <h2 class="section-title">业绩预告变动<span class="date-info">业绩预告分析期: 2020年09月30日</span></h2>
+            <table id="high-change-table">
+                <thead>
+                    <tr>
+                        <th>股票代码</th>
+                        <th>股票名称</th>
+                        <th>预测指标</th>
+                        <th>变动幅度</th>
+                        <th>预测值(万元)</th>
+                        <th>上年同期值(万元)</th>
+                        <th>预告类型</th>
+                        <th>变动原因</th>
+                        <th>公告日期</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    
+        <tr>
+            <td>002330</td>
+            <td>得利斯</td>
+            <td>每股收益</td>
+            <td class="positive-change">+493.14%</td>
+            <td>0.00</td>
+            <td>0.00</td>
+            <td class="small-text">预增</td>
+            <td class="change-reason small-text">一、受市场因素影响,公司主营产品冷冻肉及冷却肉、低温肉制品、速冻调理类产品收入较去年同期均有大幅增长,肉牛加工项目自2019年竣工投产以来,牛肉类产品推广效果良好,产销量提高,预计三季度,公司以上主要产品收入将会持续增加。二、因公司战略发展规划需要,拟转让全资子公司西安得利斯100%股权,本次股权转让将对三季度累计净利润产生积极影响。</td>
+            <td>2020-08-22</td>
+        </tr>
+        
+        <tr>
+            <td>600683</td>
+            <td>京投发展</td>
+            <td>归属于上市公司股东的净利润</td>
+            <td class="positive-change">+488.38%</td>
+            <td>9,600.00</td>
+            <td>-2,471.78</td>
+            <td class="small-text">扭亏</td>
+            <td class="change-reason small-text">公司前三季度房地产业务实现交付较上年同期增加,且公司在规模逐步扩大情况下,商业模式不断创新,持续提升运营效率,努力压缩费用开支所致。</td>
+            <td>2020-10-16</td>
+        </tr>
+        
+        <tr>
+            <td>688606</td>
+            <td>奥泰生物</td>
+            <td>扣除非经常性损益后的净利润</td>
+            <td class="positive-change">+486.75%</td>
+            <td>37,317.26</td>
+            <td>5,883.01</td>
+            <td class="small-text">预增</td>
+            <td class="change-reason small-text"></td>
+            <td>2020-10-12</td>
+        </tr>
+        
+        <tr>
+            <td>002200</td>
+            <td>ST交投</td>
+            <td>归属于上市公司股东的净利润</td>
+            <td class="negative-change">-483.90%</td>
+            <td>-10,750.00</td>
+            <td>2,800.20</td>
+            <td class="small-text">首亏</td>
+            <td class="change-reason small-text">1.报告期内,受新型冠状病毒肺炎疫情的影响,公司积极支持疫情防控,严格按规定采取防疫措施,公司及公司上下游企业复工延缓。疫情得到有效控制后,公司积极采取各项措施逐步恢复正常生产经营工作,但报告期内公司工程业务的正常实施时间比上年同期大幅减少,项目实施进度不及上年同期,导致报告期内营业收入和营业利润较上年同期减少;2.上年同期,为盘活资产,公司按照评估结果,转让了金殿基地和成都公司股权,产生资产处置收益8,348.24万元,本报告期无此影响。</td>
+            <td>2020-10-15</td>
+        </tr>
+        
+        <tr>
+            <td>002709</td>
+            <td>天赐材料</td>
+            <td>净利润</td>
+            <td class="positive-change">+483.21%</td>
+            <td>52,500.00</td>
+            <td>9,002.00</td>
+            <td class="small-text">预增</td>
+            <td class="change-reason small-text">预计归属于上市公司股东的净利润变动区间为50,000万元至55,000万元,较去年同期上升幅度区间为455.43%至510.98%,主要原因为:(1)日化材料及特种化学品事业部卡波姆高毛利产品销量及销售额占比上升,产品结构优化,毛利率提升明显;(2)锂离子电池材料电解液产品销量增长,产品原材料自产率提升,毛利率提升。</td>
+            <td>2020-08-19</td>
+        </tr>
+        
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">业绩超预期<span class="date-info">当期业绩期: 2020年09月30日, 上期预测期: 2020年06月30日</span></h2>
+            <table id="exceed-expect-table">
+                <thead>
+                    <tr>
+                        <th>股票代码</th>
+                        <th>股票名称</th>
+                        <th>上期预测值(万元)</th>
+                        <th>本期实际净利润(万元)</th>
+                        <th>超预期倍数</th>
+                        <th>预告类型</th>
+                        <th>预测指标</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    
+        <tr>
+            <td>688656</td>
+            <td>浩欧博</td>
+            <td>220.00</td>
+            <td>3,869.17</td>
+            <td class="positive-change">17.59倍</td>
+            <td class="small-text">预减</td>
+            <td>净利润</td>
+        </tr>
+        
+        <tr>
+            <td>688131</td>
+            <td>皓元医药</td>
+            <td>2,750.00</td>
+            <td>7,065.61</td>
+            <td class="positive-change">2.57倍</td>
+            <td class="small-text">预增</td>
+            <td>净利润</td>
+        </tr>
+        
+        <tr>
+            <td>688390</td>
+            <td>固德威</td>
+            <td>7,726.00</td>
+            <td>19,676.37</td>
+            <td class="positive-change">2.55倍</td>
+            <td class="small-text">预增</td>
+            <td>净利润</td>
+        </tr>
+        
+        <tr>
+            <td>688056</td>
+            <td>莱伯泰科</td>
+            <td>1,450.00</td>
+            <td>3,626.97</td>
+            <td class="positive-change">2.50倍</td>
+            <td class="small-text">略减</td>
+            <td>净利润</td>
+        </tr>
+        
+        <tr>
+            <td>605117</td>
+            <td>德业股份</td>
+            <td>11,409.00</td>
+            <td>27,965.42</td>
+            <td class="positive-change">2.45倍</td>
+            <td class="small-text">略增</td>
+            <td>净利润</td>
+        </tr>
+        
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
