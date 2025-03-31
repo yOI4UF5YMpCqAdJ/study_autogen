@@ -95,8 +95,124 @@
             font-weight: normal;
             margin-left: 10px;
         }
+        
+        /* 响应式布局设置 */
+        @media screen and (max-width: 768px) {
+            body {
+                margin: 10px;
+            }
+            .container {
+                padding: 10px;
+            }
+            h1 {
+                font-size: 1.5em;
+            }
+            .section-title {
+                font-size: 1.2em;
+            }
+            
+            /* 表格响应式处理 */
+            table, thead, tbody, th, td, tr {
+                display: block;
+            }
+            
+            thead tr {
+                position: absolute;
+                top: -9999px;
+                left: -9999px;
+            }
+            
+            tr {
+                margin-bottom: 15px;
+                border: 1px solid #ddd;
+                padding: 8px;
+                border-radius: 4px;
+            }
+            
+            td {
+                position: relative;
+                padding-left: 50%;
+                text-align: right;
+                border: none;
+                border-bottom: 1px solid #eee;
+                max-width: none;
+            }
+            
+            td:last-child {
+                border-bottom: none;
+            }
+            
+            td:before {
+                position: absolute;
+                left: 8px;
+                width: 45%;
+                padding-right: 10px;
+                white-space: nowrap;
+                text-align: left;
+                font-weight: bold;
+                content: attr(data-label);
+            }
+            
+            /* 资金流相关样式调整 */
+            .fund-flow-container td {
+                padding-left: 50%;
+            }
+            
+            .fund-flow-header td {
+                padding-left: 8px;
+                text-align: center !important;
+            }
+            
+            .fund-flow-data-header {
+                display: none;
+            }
+            
+            /* 修复资金流表格在手机模式下的显示问题 */
+            .fund-flow-row td[colspan] {
+                padding-left: 50%;
+                text-align: right;
+            }
+            
+            .fund-flow-row td[colspan]:before {
+                position: absolute;
+                left: 8px;
+                width: 45%;
+                padding-right: 10px;
+                white-space: nowrap;
+                text-align: left;
+                font-weight: bold;
+                content: attr(data-label);
+            }
+            
+            /* 确保资金流容器正确显示在手机模式下 */
+            .fund-flow-container {
+                margin-top: 0;
+                border: none;
+            }
+            
+            .fund-flow-container.table-row-group {
+                display: block;
+            }
+            
+            /* 调整资金流标题在手机模式下的样式 */
+            .fund-flow-header {
+                background-color: #f0f0f0;
+                text-align: center;
+                margin-bottom: 0;
+                border-bottom-left-radius: 0;
+                border-bottom-right-radius: 0;
+            }
+            
+            .fund-flow-header td {
+                text-align: center !important;
+                padding: 8px;
+                font-weight: bold;
+                border-bottom: none;
+            }
+        }
     </style>
 </head>
+<!-- https://stockpage.10jqka.com.cn/301616/ -->
 <body>
     <div class="container">
         <h1>股票业绩分析报告</h1>

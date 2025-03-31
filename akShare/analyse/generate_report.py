@@ -2,7 +2,10 @@ import sys
 import os
 from datetime import datetime
 from dotenv import load_dotenv
+import akshare as ak
+from typing import Dict, Any, List, Tuple
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+import createHtml
 from db.db_manager import db_manager
 
 def load_config():
@@ -14,7 +17,10 @@ def load_config():
             'low': float(os.getenv('MULTIPLE_LOW', 2)),
             'high': float(os.getenv('MULTIPLE_HIGH', -1))
         },
-        'exceedMultiple': float(os.getenv('EXCEED_MULTIPLE', 2)),
+        'exceedMultiple': {
+            'low': float(os.getenv('EXCEED_MULTIPLE_LOW', 2)),
+            'high': float(os.getenv('EXCEED_MULTIPLE_HIGH', 5))
+        },
         'queryDate': os.getenv('QUERY_DATE', 'auto')
     }
 
@@ -129,14 +135,15 @@ def check_data_availability(date):
     print_debug(f"预告数据数量: {count}")
     return count > 0
 
-def get_exceed_area_stocks(current_report_date, query_num, exceed_multiple_percentage):
+def get_exceed_area_stocks(current_report_date, query_num, exceed_multiple_config):
     """获取业绩超预期的股票"""
     print_debug(f"执行业绩超预期分析:")
     prev_period_date = get_prev_period_date(current_report_date)
     print_debug(f"- 当期业绩期: {current_report_date}")
     print_debug(f"- 上期预告期: {prev_period_date}")
-    exceed_multiple = exceed_multiple_percentage  # 直接使用倍数值
-    print_debug(f"- 超预期倍数要求: {exceed_multiple}倍")
+    exceed_multiple_low = exceed_multiple_config['low']
+    exceed_multiple_high = exceed_multiple_config['high']
+    print_debug(f"- 超预期倍数范围: {exceed_multiple_low}~{exceed_multiple_high}倍")
     print_debug(f"- 返回记录数限制: {query_num}")
     
     # 检查数据可用性
@@ -154,14 +161,14 @@ def get_exceed_area_stocks(current_report_date, query_num, exceed_multiple_perce
         print_debug(f"上期预告({prev_period_date}): {prereport_count}条")
         return [], current_report_date
     
-    # 获取所有当期业绩报告数据
+    # 获取当期业绩报告数据，每个股票取净利润最高的一条记录
     current_report_sql = """
-    WITH RankedReports AS (
+    WITH StockProfit AS (
         SELECT 
             stock_code,
             stock_name,
             net_profit as actual_profit,
-            ROW_NUMBER() OVER (PARTITION BY stock_code ORDER BY net_profit DESC) as rn
+            ROW_NUMBER() OVER(PARTITION BY stock_code ORDER BY net_profit DESC) as rn
         FROM stock_report 
         WHERE report_date = %s
     )
@@ -169,30 +176,22 @@ def get_exceed_area_stocks(current_report_date, query_num, exceed_multiple_perce
         stock_code,
         stock_name,
         actual_profit
-    FROM RankedReports
+    FROM StockProfit
     WHERE rn = 1
     """
     
-    # 获取所有上期预告数据（每个股票取预测值最大的一条记录）
+    # 获取上期预告数据，每个股票取预测值最高的一条记录
     prereport_sql = """
-    WITH RankedPredictions AS (
+    WITH StockPredict AS (
         SELECT 
             stock_code,
             stock_name,
             predict_value,
             predict_type,
             predict_indicator,
-            ROW_NUMBER() OVER (PARTITION BY stock_code ORDER BY 
-                CASE 
-                    WHEN predict_type IN ('预增', '预盈') THEN 1
-                    WHEN predict_type = '预平' THEN 2
-                    ELSE 3
-                END,
-                predict_value DESC
-            ) as rn
+            ROW_NUMBER() OVER(PARTITION BY stock_code ORDER BY predict_value DESC) as rn
         FROM stock_prereport
-        WHERE report_date = %s  -- 使用上期日期
-        AND predict_indicator = '净利润'
+        WHERE report_date = %s
     )
     SELECT 
         stock_code,
@@ -200,7 +199,7 @@ def get_exceed_area_stocks(current_report_date, query_num, exceed_multiple_perce
         predict_value,
         predict_type,
         predict_indicator
-    FROM RankedPredictions
+    FROM StockPredict
     WHERE rn = 1
     """
     
@@ -233,8 +232,8 @@ def get_exceed_area_stocks(current_report_date, query_num, exceed_multiple_perce
         # 按超预期倍数降序排序
         all_exceed_stocks.sort(key=lambda x: x[4], reverse=True)
         
-        # 筛选超过指定倍数的记录，并返回前N条
-        exceed_stocks = [stock for stock in all_exceed_stocks if stock[4] >= exceed_multiple][:query_num]
+        # 筛选在指定倍数范围内的记录，并返回前N条
+        exceed_stocks = [stock for stock in all_exceed_stocks if exceed_multiple_low <= stock[4] <= exceed_multiple_high][:query_num]
         
         print_debug(f"查询返回记录数: {len(exceed_stocks)}")
         return exceed_stocks, current_report_date
@@ -247,8 +246,8 @@ def get_high_change_stocks(report_date, config):
     """获取业绩变动超过指定倍数的股票"""
     print_debug(f"查询 {report_date} 的高变动股票")
     
-    multiple_low = config['multiple']['low'] * 100
-    multiple_high = config['multiple']['high'] * 100 if config['multiple']['high'] != -1 else float('inf')
+    multiple_low = int(config['multiple']['low'] * 100)
+    multiple_high = int(config['multiple']['high'] * 100) if config['multiple']['high'] != -1 else float('inf')
     query_num = config['queryNum']
     
     sql = """
@@ -263,10 +262,10 @@ def get_high_change_stocks(report_date, config):
             predict_type,
             change_reason, 
             notice_date,
-            ROW_NUMBER() OVER (PARTITION BY stock_code ORDER BY ABS(change_rate) DESC) as rn
+            ROW_NUMBER() OVER (PARTITION BY stock_code ORDER BY change_rate DESC) as rn
         FROM stock_prereport 
         WHERE report_date = %s 
-        AND ABS(change_rate) >= %s
+        AND change_rate >= %s
     )
     SELECT 
         stock_code, 
@@ -284,104 +283,60 @@ def get_high_change_stocks(report_date, config):
     
     params = [report_date, multiple_low]
     if multiple_high != float('inf'):
-        sql += " AND ABS(change_rate) <= %s"
+        sql += " AND change_rate <= %s"
         params.append(multiple_high)
     
-    sql += " ORDER BY ABS(change_rate) DESC LIMIT %s"
+    sql += " ORDER BY change_rate DESC LIMIT %s"
     params.append(query_num)
+    
+    final_sql = db_manager.cursor.mogrify(sql, tuple(params))
+    print_debug(f"执行SQL:\n{final_sql}")
     
     db_manager.execute(sql, tuple(params))
     results = db_manager.fetchall()
     print_debug(f"找到 {len(results)} 条结果")
     return results
 
-def format_number(number):
-    """格式化数字为万元"""
-    if number is None:
-        return "0"
-    return format(number / 10000, ',.2f')
+def get_stock_fund_flow(stock_code):
+    """获取单个股票的资金流数据"""
+    try:
+        # 根据股票代码判断市场
+        market = ''
+        if stock_code.startswith('300'):
+            market = 'bj'
+        elif stock_code.startswith('6'):
+            market = 'sh'
+        elif stock_code.startswith(('001', '002', '003', '004')):
+            market = 'sz'
+        else:
+            return None
+            
+        # 获取资金流数据
+        df = ak.stock_individual_fund_flow(stock=stock_code, market=market)
+        print(f"===== 股票 {stock_code} 资金流数据 =====")
+        print("列名:", df.columns.tolist())
+        print("数据形状:", df.shape)
+        if not df.empty:
+            print("前5条数据:")
+            print(df.sort_values(by='日期', ascending=False).head(5))
+        else:
+            print("警告: 未获取到数据")
+        # 按日期倒序排序并取前5条记录
+        return df.sort_values(by='日期', ascending=False).head(5)
+    except Exception as e:
+        print(f"获取股票 {stock_code} 资金流数据失败: {e}")
+        return None
 
-def generate_html_report(prereport_date, exceed_date, high_change_stocks, exceed_area_stocks):
-    """生成HTML报告"""
-    template_path = os.path.join(os.path.dirname(__file__), 'performance_analysis.html')
-    with open(template_path, 'r', encoding='utf-8') as f:
-        html_content = f.read()
-    
-    formatted_prereport_date = f"{prereport_date[:4]}年{prereport_date[4:6]}月{prereport_date[6:]}日"
-    formatted_exceed_date = f"{exceed_date[:4]}年{exceed_date[4:6]}月{exceed_date[6:]}日" if exceed_date else "无可用数据"
-    
-    # 替换表格标题中的日期
-    html_content = html_content.replace(
-        '<h2 class="section-title">业绩预告变动</h2>',
-        f'<h2 class="section-title">业绩预告变动<span class="date-info">业绩预告分析期: {formatted_prereport_date}</span></h2>'
-    )
-    
-    # 获取上期预告日期
-    prev_period_date = get_prev_period_date(exceed_date)
-    formatted_prev_date = f"{prev_period_date[:4]}年{prev_period_date[4:6]}月{prev_period_date[6:]}日"
-    
-    html_content = html_content.replace(
-        '<h2 class="section-title">业绩预告超预期股票</h2>',
-        f'<h2 class="section-title">业绩超预期<span class="date-info">当期业绩期: {formatted_exceed_date}, 上期预测期: {formatted_prev_date}</span></h2>'
-    )
-    
-    # 移除原有的日期显示区域
-    html_content = html_content.replace(
-        '<div class="report-dates">\n            <!-- 日期信息将通过Python脚本动态生成 -->\n        </div>',
-        ''
-    )
-    
-    high_change_rows = ""
-    for stock in high_change_stocks:
-        change_class = "positive-change" if stock[3] > 0 else "negative-change"
-        high_change_rows += f"""
-        <tr>
-            <td>{stock[0]}</td>
-            <td>{stock[1]}</td>
-            <td>{stock[2]}</td>
-            <td class="{change_class}">{stock[3]:+.2f}%</td>
-            <td>{format_number(stock[4])}</td>
-            <td>{format_number(stock[5])}</td>
-            <td class="small-text">{stock[6] or ''}</td>
-            <td class="change-reason small-text">{stock[7] or ''}</td>
-            <td>{stock[8]}</td>
-        </tr>
-        """
-    
-    exceed_rows = ""
-    for stock in exceed_area_stocks:
-        exceed_rate = stock[4]  # 实际值/预测值的倍数
-        exceed_rows += f"""
-        <tr>
-            <td>{stock[0]}</td>
-            <td>{stock[1]}</td>
-            <td>{format_number(stock[2])}</td>
-            <td>{format_number(stock[3])}</td>
-            <td class="positive-change">{exceed_rate:.2f}倍</td>
-            <td class="small-text">{stock[5] or ''}</td>
-            <td>{stock[6]}</td>
-        </tr>
-        """
-    
-    html_content = html_content.replace(
-        '<!-- 数据将通过Python脚本动态生成 -->', 
-        high_change_rows if high_change_stocks else "<tr><td colspan='9'>没有找到符合条件的数据</td></tr>", 
-        1
-    )
-    html_content = html_content.replace(
-        '<!-- 数据将通过Python脚本动态生成 -->', 
-        exceed_rows if exceed_area_stocks else "<tr><td colspan='7'>没有找到符合条件的数据</td></tr>", 
-        1
-    )
-    
-    current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"performance_analysis_{current_time}.html"
-    output_path = os.path.join(os.path.dirname(__file__), 'htmls', filename)
-    
-    with open(output_path, 'w', encoding='utf-8') as f:
-        f.write(html_content)
-    
-    return output_path
+def add_fund_flow_data(stocks: List[Tuple]) -> List[Dict[str, Any]]:
+    """为股票数据添加资金流信息"""
+    enhanced_stocks = []
+    for stock in stocks:
+        stock_dict = {
+            str(i): value for i, value in enumerate(stock)  # 将元组转换为字典以便添加额外数据
+        }
+        stock_dict['fund_flow'] = get_stock_fund_flow(stock[0])
+        enhanced_stocks.append(stock_dict)
+    return enhanced_stocks
 
 def main():
     try:
@@ -407,14 +362,27 @@ def main():
             print(f"未找到 {prereport_date} 的预告数据")
             return
             
+        # 获取股票数据并添加资金流信息
         high_change_stocks = get_high_change_stocks(prereport_date, config)
+        high_change_stocks_with_fund = add_fund_flow_data(high_change_stocks)
+        
         exceed_area_stocks, _ = get_exceed_area_stocks(exceed_date, config['queryNum'], config['exceedMultiple'])
+        exceed_area_stocks_with_fund = add_fund_flow_data(exceed_area_stocks)
             
         print(f"\n=== 数据分析报告 ===")
         print(f"业绩预告分析期: {prereport_date}")
         print(f"超预期分析期: {exceed_date if exceed_date else '无可用数据'}")
         
-        output_path = generate_html_report(prereport_date, exceed_date, high_change_stocks, exceed_area_stocks)
+        prev_period_date = get_prev_period_date(exceed_date)
+        # 使用新的HTML生成模块
+        output_path = createHtml.generate_html_report(
+            prereport_date=prereport_date,
+            exceed_date=exceed_date,
+            prev_period_date=prev_period_date,
+            high_change_stocks=high_change_stocks_with_fund,
+            exceed_area_stocks=exceed_area_stocks_with_fund
+        )
+        
         print(f"\n报告生成完成！")
         print(f"报告保存路径: {output_path}")
         
