@@ -15,12 +15,12 @@ def getPreData():
 
 #业绩
 def getReport():
-    stock_yjbb_em_df = ak.stock_yjbb_em(date="20250331")
+    stock_yjbb_em_df = ak.stock_yjbb_em(date="20241231")
     # 筛选股票代码为300274的记录
-    filtered_df = stock_yjbb_em_df[stock_yjbb_em_df["股票代码"] == stockCode]
+    # filtered_df = stock_yjbb_em_df[stock_yjbb_em_df["股票代码"] == stockCode]
 
-    print("\n300274的记录：")
-    print(filtered_df)
+    # print("\n300274的记录：")
+    # print(filtered_df)
 
 
 def businessAmountFlow():
@@ -38,4 +38,4 @@ def singleAmountFlow():
     print(sorted_df)
 
 if __name__ == "__main__":
-  singleAmountFlow()
+  getReport()

@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>股票业绩分析报告</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+        .report-dates {
+            text-align: center;
+            color: #7f8c8d;
+            margin: 10px 0;
+            font-size: 1.1em;
+        }
+        .report-dates div {
+            margin: 5px 0;
+        }
+        .section {
+            margin: 20px 0;
+        }
+        .section-title {
+            color: #2c3e50;
+            margin: 15px 0;
+            padding: 10px;
+            background-color: #ecf0f1;
+            border-radius: 4px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 0.95em;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 120px;
+        }
+        th {
+            background-color: #34495e;
+            color: white;
+            font-size: 0.9em;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .positive-change {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        .negative-change {
+            color: #c0392b;
+            font-weight: bold;
+        }
+        .change-reason {
+            max-width: 180px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .change-reason:hover {
+            white-space: normal;
+            overflow: visible;
+        }
+        .small-text {
+            font-size: 0.85em;
+        }
+        .date-info {
+            font-size: 0.55em;
+            font-weight: normal;
+            margin-left: 10px;
+        }
+        
+        /* 响应式布局设置 */
+        @media screen and (max-width: 768px) {
+            body {
+                margin: 10px;
+            }
+            .container {
+                padding: 10px;
+            }
+            h1 {
+                font-size: 1.5em;
+            }
+            .section-title {
+                font-size: 1.2em;
+            }
+            
+            /* 表格响应式处理 */
+            table, thead, tbody, th, td, tr {
+                display: block;
+            }
+            
+            thead tr {
+                position: absolute;
+                top: -9999px;
+                left: -9999px;
+            }
+            
+            tr {
+                margin-bottom: 15px;
+                border: 1px solid #ddd;
+                padding: 8px;
+                border-radius: 4px;
+            }
+            
+            td {
+                position: relative;
+                padding-left: 50%;
+                text-align: right;
+                border: none;
+                border-bottom: 1px solid #eee;
+                max-width: none;
+            }
+            
+            td:last-child {
+                border-bottom: none;
+            }
+            
+            td:before {
+                position: absolute;
+                left: 8px;
+                width: 45%;
+                padding-right: 10px;
+                white-space: nowrap;
+                text-align: left;
+                font-weight: bold;
+                content: attr(data-label);
+            }
+            
+            /* 资金流相关样式调整 */
+            .fund-flow-container td {
+                padding-left: 50%;
+            }
+            
+            .fund-flow-header td {
+                padding-left: 8px;
+                text-align: center !important;
+            }
+            
+            .fund-flow-data-header {
+                display: none;
+            }
+            
+            /* 修复资金流表格在手机模式下的显示问题 */
+            .fund-flow-row td[colspan] {
+                padding-left: 50%;
+                text-align: right;
+            }
+            
+            .fund-flow-row td[colspan]:before {
+                position: absolute;
+                left: 8px;
+                width: 45%;
+                padding-right: 10px;
+                white-space: nowrap;
+                text-align: left;
+                font-weight: bold;
+                content: attr(data-label);
+            }
+            
+            /* 确保资金流容器正确显示在手机模式下 */
+            .fund-flow-container {
+                margin-top: 0;
+                border: none;
+            }
+            
+            .fund-flow-container.table-row-group {
+                display: block;
+            }
+            
+            /* 调整资金流标题在手机模式下的样式 */
+            .fund-flow-header {
+                background-color: #f0f0f0;
+                text-align: center;
+                margin-bottom: 0;
+                border-bottom-left-radius: 0;
+                border-bottom-right-radius: 0;
+            }
+            
+            .fund-flow-header td {
+                text-align: center !important;
+                padding: 8px;
+                font-weight: bold;
+                border-bottom: none;
+            }
+        }
+    </style>
+
+    <style>
+    .stock-main-row {
+        background-color: #f0f8ff !important;
+    }
+    .nested-table {
+        width: 100%;
+        margin: 0;
+        display: none;
+    }
+    .nested-table.visible {
+        display: table;
+    }
+    .fund-flow-row {
+        background-color: #f9f9f9;
+    }
+    /* PC端资金流样式 */
+    .fund-flow-row td {
+        font-size: 0.85em;
+        color: #666;
+        text-align: center;
+    }
+    .fund-flow-header {
+        font-weight: bold;
+        background-color: #f5f5f5 !important;
+        cursor: pointer;
+    }
+    .fund-flow-header td {
+        text-align: right !important;
+        font-size: 0.9em !important;
+        color: #333 !important;
+        padding: 8px !important;
+    }
+    .fund-flow-data-header {
+        background-color: #f5f5f5;
+        font-size: 0.85em;
+        color: #666;
+    }
+    .fund-flow-data-header td {
+        text-align: center;
+        padding: 6px !important;
+    }
+    .fund-inflow {
+        color: #d14836 !important;
+    }
+    .fund-outflow {
+        color: #093 !important;
+    }
+    .stock-link {
+        color: #333;
+        text-decoration: none;
+    }
+    .stock-link:hover {
+        text-decoration: underline;
+        color: #1a0dab;
+    }
+    
+    /* 确保PC端嵌套表格内容居中 */
+    .nested-table td {
+        text-align: center;
+    }
+    
+    @media screen and (max-width: 768px) {
+        .nested-table {
+            display: none !important;
+            margin: 0 !important;
+            width: 100% !important;
+        }
+        .nested-table.visible {
+            display: table !important;
+        }
+        .nested-table tr {
+            display: table-row !important;
+            margin: 0 !important;
+            border: none !important;
+        }
+        .nested-table td {
+            display: table-cell !important;
+            padding: 6px !important;
+            text-align: right !important; /* 移动端保持右对齐 */
+            position: static !important;
+            border: 1px solid #ddd !important;
+        }
+        .nested-table td:first-child {
+            text-align: left !important;
+        }
+        .fund-flow-header td {
+            padding: 10px !important;
+            text-align: right !important;
+            background-color: #f5f5f5 !important;
+        }
+        .fund-flow-data-header {
+            display: table-row !important;
+        }
+        .fund-flow-data-header td {
+            background-color: #f9f9f9 !important;
+            text-align: center !important;
+            font-weight: bold !important;
+            padding: 8px !important;
+        }
+    }
+    </style>
+    <script>
+    function toggleFundFlow(stockCode) {
+        console.log('Toggle clicked for stock:', stockCode);
+        var nestedTable = document.querySelector(`table[data-stock="${stockCode}"]`);
+        console.log('Found nested table:', nestedTable);
+        
+        if (nestedTable) {
+            var isVisible = nestedTable.classList.contains('visible');
+            console.log('Current visibility:', isVisible);
+            nestedTable.classList.toggle('visible');
+            console.log('New visibility:', !isVisible);
+        }
+    }
+    </script>
+    
+</head>
+<!-- https://stockpage.10jqka.com.cn/301616/ -->
+<body>
+    <div class="container">
+        <h1>股票业绩分析报告</h1>
+        
+        
+        <div class="section">
+            <h2 class="section-title">业绩预告变动<span class="date-info">业绩预告分析期: 2025年03月31日</span></h2>
+            <table id="high-change-table">
+                <thead>
+                    <tr>
+                        <th>股票代码</th>
+                        <th>股票名称</th>
+                        <th>预测指标</th>
+                        <th>变动幅度</th>
+                        <th>预测值(万元)</th>
+                        <th>上年同期值(万元)</th>
+                        <th>预告类型</th>
+                        <th>变动原因</th>
+                        <th>公告日期</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    
+        <tr class="stock-main-row">
+            <td data-label="股票代码"><a href="https://stockpage.10jqka.com.cn/688591/" target="_blank" class="stock-link">688591</a></td>
+            <td data-label="股票名称"><a href="https://stockpage.10jqka.com.cn/688591/" target="_blank" class="stock-link">泰凌微</a></td>
+            <td data-label="预测指标">归属于上市公司股东的净利润</td>
+            <td data-label="变动幅度" class="positive-change">+894.00%</td>
+            <td data-label="预测值(万元)">3,500.00</td>
+            <td data-label="上年同期值(万元)">-440.59</td>
+            <td data-label="预告类型" class="small-text">扭亏</td>
+            <td data-label="变动原因" class="change-reason small-text">一季度是公司的传统销售淡季,本报告期内,公司取得了历史上最好的一季度财务表现,销售额和净利润都是一季度的历史新高。收入同比取得高增长,而净利润的增速远超收入增速。本报告期,公司销售额实现同比高增长,受益于下游行业数字化和智能化渗透率的持续提升,公司在物联网连接市场(智能家居、ESL、办公等)及音频市场的主要客户和新增客户的出货量都有显著提升;此外,一些新开拓的垂直市场如智能储能BMS、智能网关等也贡献了新的销售额增长;公司的几个新产品包括端侧AI芯片等都开始了批量出货。本报告期内,净利润大幅提升,原因主要为以下两点:1、受益于高毛利产品和客户销售占比的提升,以及销售规模扩大带来的成本优势,公司毛利率将继续维持高位,预计本报告期公司整体毛利率将高于2024年全年平均毛利率;2、因为公司销售额快速成长带来的规模效应,在维持较高研发投入的同时,公司本期的净利率显著提升,后续随着销售额的持续增长,公司净利率还有望进一步提升。在新产品线方面,公司的Matter over thread产品、BLE6.0Channel sounding(高精度室内定位)芯片在全球一线客户率先进入批量;公司新推出的端侧AI芯片在国内行业头部客户已经被批量采用;另外,采用公司芯片的多个AI办公产品也已经推向市场,可以对接字节跳动豆包、DeepSeek等应用;公司新推出的WiFi芯片也实现了批量出货。</td>
+            <td data-label="公告日期">2025-03-26</td>
+        </tr>
+        
+            <tr class="fund-flow-header">
+                <td colspan="9" onclick="toggleFundFlow('688591')">
+                    最近5日资金流向（万元）
+                </td>
+            </tr>
+            <tr>
+                <td colspan="9" style="padding: 0;">
+                    <table class="nested-table" data-stock="688591">
+                        <tr class="fund-flow-data-header">
+                            <td>日期</td>
+                            <td>主力净流入</td>
+                            <td>小单净流入</td>
+                            <td>中单净流入</td>
+                        </tr>
+            
+                        <tr class="fund-flow-row">
+                            <td>2025-04-01</td>
+                            <td class="fund-outflow">-7,405.58</td>
+                            <td>4,162.69</td>
+                            <td>3,242.89</td>
+                        </tr>
+                
+                        <tr class="fund-flow-row">
+                            <td>2025-03-31</td>
+                            <td class="fund-inflow">10,265.50</td>
+                            <td>-5,504.28</td>
+                            <td>-4,761.22</td>
+                        </tr>
+                
+                        <tr class="fund-flow-row">
+                            <td>2025-03-28</td>
+                            <td class="fund-outflow">-10,695.37</td>
+                            <td>13,943.95</td>
+                            <td>-3,248.58</td>
+                        </tr>
+                
+                        <tr class="fund-flow-row">
+                            <td>2025-03-27</td>
+                            <td class="fund-outflow">-11,239.29</td>
+                            <td>8,120.43</td>
+                            <td>3,118.86</td>
+                        </tr>
+                
+                        <tr class="fund-flow-row">
+                            <td>2025-03-26</td>
+                            <td class="fund-inflow">15,620.50</td>
+                            <td>-3,777.10</td>
+                            <td>-11,843.41</td>
+                        </tr>
+                
+                    </table>
+                </td>
+            </tr>
+            
+        <tr class="stock-main-row">
+            <td data-label="股票代码"><a href="https://stockpage.10jqka.com.cn/300199/" target="_blank" class="stock-link">300199</a></td>
+            <td data-label="股票名称"><a href="https://stockpage.10jqka.com.cn/300199/" target="_blank" class="stock-link">翰宇药业</a></td>
+            <td data-label="预测指标">归属于上市公司股东的净利润</td>
+            <td data-label="变动幅度" class="positive-change">+568.02%</td>
+            <td data-label="预测值(万元)">6,600.00</td>
+            <td data-label="上年同期值(万元)">-1,410.20</td>
+            <td data-label="预告类型" class="small-text">扭亏</td>
+            <td data-label="变动原因" class="change-reason small-text">2025年第一季度,公司预计归属于上市公司股东的净利润实现扭亏为盈,较去年同期增长了7,410.20万元至8,610.20万元。主要原因如下:1、2024年12月23日,公司向美国食品药品监督管理局申报的利拉鲁肽注射液获得批准证书,公司此前与海外客户签署的多肽制剂及原料药等多个重要订单陆续完成发货,并在本期完成相关会计科目的确认,实现公司本期营业收入的增长。2、本期公司主要的营业收入来源于海外业务,受益于海外市场需求的持续增长、公司产品的市场竞争力以及严格的成本控制等多重因素,海外业务的营业利润率较高,进一步推动了公司整体盈利水平的提升。</td>
+            <td data-label="公告日期">2025-03-27</td>
+        </tr>
+        
+            <tr class="fund-flow-header">
+                <td colspan="9" onclick="toggleFundFlow('300199')">
+                    最近5日资金流向（万元）
+                </td>
+            </tr>
+            <tr>
+                <td colspan="9" style="padding: 0;">
+                    <table class="nested-table" data-stock="300199">
+                        <tr class="fund-flow-data-header">
+                            <td>日期</td>
+                            <td>主力净流入</td>
+                            <td>小单净流入</td>
+                            <td>中单净流入</td>
+                        </tr>
+            
+                        <tr class="fund-flow-row">
+                            <td>2025-04-01</td>
+                            <td class="fund-outflow">-15,409.63</td>
+                            <td>10,018.50</td>
+                            <td>5,391.13</td>
+                        </tr>
+                
+                        <tr class="fund-flow-row">
+                            <td>2025-03-31</td>
+                            <td class="fund-outflow">-2,017.14</td>
+                            <td>9,704.44</td>
+                            <td>-7,687.30</td>
+                        </tr>
+                
+                        <tr class="fund-flow-row">
+                            <td>2025-03-28</td>
+                            <td class="fund-inflow">9,912.49</td>
+                            <td>-7,084.57</td>
+                            <td>-2,827.92</td>
+                        </tr>
+                
+                        <tr class="fund-flow-row">
+                            <td>2025-03-27</td>
+                            <td class="fund-outflow">-9,646.47</td>
+                            <td>9,696.94</td>
+                            <td>-50.48</td>
+                        </tr>
+                
+                        <tr class="fund-flow-row">
+                            <td>2025-03-26</td>
+                            <td class="fund-outflow">-2,054.63</td>
+                            <td>1,150.11</td>
+                            <td>904.52</td>
+                        </tr>
+                
+                    </table>
+                </td>
+            </tr>
+            
+        <tr class="stock-main-row">
+            <td data-label="股票代码"><a href="https://stockpage.10jqka.com.cn/300476/" target="_blank" class="stock-link">300476</a></td>
+            <td data-label="股票名称"><a href="https://stockpage.10jqka.com.cn/300476/" target="_blank" class="stock-link">胜宏科技</a></td>
+            <td data-label="预测指标">扣除非经常性损益后的净利润</td>
+            <td data-label="变动幅度" class="positive-change">+321.08%</td>
+            <td data-label="预测值(万元)">87,000.00</td>
+            <td data-label="上年同期值(万元)">20,660.94</td>
+            <td data-label="预告类型" class="small-text">预增</td>
+            <td data-label="变动原因" class="change-reason small-text">公司坚定“拥抱AI,奔向未来”,精准把握AI算力技术革新与数据中心升级浪潮带来的历史新机遇,占据全球PCB制造技术制高点,凭借研发技术优势、制造技术优势和品质技术优势,驱动公司高价值量产品的订单规模急速上升,盈利能力进一步增强。报告期内,公司经营业绩突破历史新高,净利润同比成倍增长。</td>
+            <td data-label="公告日期">2025-03-10</td>
+        </tr>
+        
+            <tr class="fund-flow-header">
+                <td colspan="9" onclick="toggleFundFlow('300476')">
+                    最近5日资金流向（万元）
+                </td>
+            </tr>
+            <tr>
+                <td colspan="9" style="padding: 0;">
+                    <table class="nested-table" data-stock="300476">
+                        <tr class="fund-flow-data-header">
+                            <td>日期</td>
+                            <td>主力净流入</td>
+                            <td>小单净流入</td>
+                            <td>中单净流入</td>
+                        </tr>
+            
+                        <tr class="fund-flow-row">
+                            <td>2025-04-01</td>
+                            <td class="fund-outflow">-12,792.61</td>
+                            <td>9,411.12</td>
+                            <td>3,381.50</td>
+                        </tr>
+                
+                        <tr class="fund-flow-row">
+                            <td>2025-03-31</td>
+                            <td class="fund-outflow">-20,971.61</td>
+                            <td>27,329.40</td>
+                            <td>-6,357.78</td>
+                        </tr>
+                
+                        <tr class="fund-flow-row">
+                            <td>2025-03-28</td>
+                            <td class="fund-inflow">9,975.25</td>
+                            <td>-396.43</td>
+                            <td>-9,578.81</td>
+                        </tr>
+                
+                        <tr class="fund-flow-row">
+                            <td>2025-03-27</td>
+                            <td class="fund-outflow">-59,162.41</td>
+                            <td>50,088.99</td>
+                            <td>9,073.42</td>
+                        </tr>
+                
+                        <tr class="fund-flow-row">
+                            <td>2025-03-26</td>
+                            <td class="fund-inflow">596.16</td>
+                            <td>5,905.25</td>
+                            <td>-6,501.42</td>
+                        </tr>
+                
+                    </table>
+                </td>
+            </tr>
+            
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">业绩超预期<span class="date-info">当期业绩期: 2024年12月31日, 上期预测期: 2024年09月30日</span></h2>
+            <table id="exceed-expect-table">
+                <thead>
+                    <tr>
+                        <th>股票代码</th>
+                        <th>股票名称</th>
+                        <th>上期预测值(万元)</th>
+                        <th>本期实际净利润(万元)</th>
+                        <th>超预期倍数</th>
+                        <th>预告类型</th>
+                        <th>预测指标</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan='7'>没有找到符合条件的数据</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

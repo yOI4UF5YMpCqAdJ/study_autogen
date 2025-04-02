@@ -274,8 +274,8 @@ def generate_html_report(prereport_date, exceed_date, prev_period_date, high_cha
         1
     )
     
-    current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"performance_analysis_{current_time}.html"
+    current_date = datetime.now().strftime("%Y%m%d")
+    filename = f"performance_analysis_{current_date}.html"
     output_path = os.path.join(os.path.dirname(__file__), 'htmls', filename)
     
     with open(output_path, 'w', encoding='utf-8') as f:

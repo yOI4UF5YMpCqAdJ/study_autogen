@@ -82,3 +82,11 @@ xxljobRun中有一个函数，这个函数做以下任务。
 3. 原来股票信息背景色稍微高亮，和资金流数据信息有明显的区分
 
 1.把生成html和查询计算逻辑分离开来，生成html的代码文件为createHtml.py放在当前目录下，然后现在的文件引用这个模块生成html
+
+generate_report中get_target_report_dates有问题。如果query_date不是是auto,则prereport_date取指定日期，exceed_date取prereport_date所在期间的上一期，，每一期是指每年的3月31日,6月30日,9月30日,12月31日，参考get_next_quarter_end和get_prev_quarter_end这两个函数
+
+修改xxlJobRun。如果没有指定日期，那么根据当前日期，业绩报告取当期的，业绩预告取下期的，比如现在20250402 ，当期应该是20250331，下期应该是20250630.每一期是指每年的3月31日,6月30日,9月30日,12月31日
+
+1. 把generate_report中关于期间，当期，前期等所有日期计算的独立写道一个文件中,dateManager.然后让generate_report来引用，同时让xxljobRun也来引用
+
+1. 修改generate_report文件中get_exceed_area_stocks函数。如果没有指定日期，那么获取当期业绩报告数据是到数据库里寻找最新的一期。然后就开始遍历数据，获取每一条数据后，到数据库的预报表中找到对应的最近的预报数据，然后的逻辑就是之前比较并计算超预期倍数。

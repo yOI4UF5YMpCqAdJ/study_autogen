@@ -4,9 +4,15 @@ from datetime import datetime
 from dotenv import load_dotenv
 import akshare as ak
 from typing import Dict, Any, List, Tuple
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-import createHtml
-from db.db_manager import db_manager
+
+# Add project root to Python path
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
+from akShare.analyse import createHtml
+from akShare.db.db_manager import db_manager
+from akShare.analyse.date_utils import get_quarter_dates, get_next_quarter_end, get_prev_quarter_end
 
 def load_config():
     """加载.env配置文件"""
@@ -28,68 +34,12 @@ def print_debug(msg):
     """打印调试信息"""
     print(f"DEBUG: {msg}")
 
-def get_quarter_dates():
-    """获取所有季度末日期"""
-    return [
-        (3, 31),
-        (6, 30),
-        (9, 30),
-        (12, 31)
-    ]
-
-def get_next_quarter_end():
-    """获取下一个最近的季度末日期（用于预报业绩变动）"""
-    current_date = datetime.now()
-    year = current_date.year
-    month = current_date.month
-    day = current_date.day
-
-    quarter_dates = get_quarter_dates()
-
-    for q_month, q_day in quarter_dates:
-        if month < q_month or (month == q_month and day <= q_day):
-            return f"{year}{q_month:02d}{q_day:02d}"
-    
-    return f"{year + 1}0331"
-
-def get_prev_quarter_end():
-    """获取上一个最近的季度末日期（用于业绩超预期分析）"""
-    current_date = datetime.now()
-    year = current_date.year
-    month = current_date.month
-    day = current_date.day
-
-    quarter_dates = [
-        (3, 31),
-        (6, 30),
-        (9, 30),
-        (12, 31)
-    ]
-    
-    # 获取当前季度的索引
-    current_quarter_idx = (month - 1) // 3
-    
-    # 计算上一个季度的年份和月份
-    if current_quarter_idx == 0:  # 如果是第一季度
-        prev_year = year - 1
-        prev_month, prev_day = quarter_dates[3]  # 返回上一年第四季度
-    else:
-        prev_year = year
-        prev_month, prev_day = quarter_dates[current_quarter_idx - 1]
-    
-    return f"{prev_year}{prev_month:02d}{prev_day:02d}"
-
 def get_prev_period_date(current_date):
     """获取上一期的日期"""
     year = int(current_date[:4])
     month = int(current_date[4:6])
     
-    quarter_dates = [
-        (3, 31),
-        (6, 30),
-        (9, 30),
-        (12, 31)
-    ]
+    quarter_dates = get_quarter_dates()
     
     # 获取当前季度的索引
     current_quarter_idx = (month - 1) // 3
@@ -111,9 +61,9 @@ def get_target_report_dates(query_date):
         prereport_date = get_next_quarter_end()
         exceed_date = get_prev_quarter_end()
     else:
-        # 指定日期模式：预告日期为指定日期，超预期分析使用指定日期作为当期
+        # 指定日期模式：预告日期为指定日期，超预期分析日期为指定日期所在期间的上一期
         prereport_date = query_date
-        exceed_date = query_date
+        exceed_date = get_prev_period_date(query_date)
     
     print_debug(f"目标日期确定:")
     print_debug(f"- 预告业绩分析日期: {prereport_date}")
@@ -146,20 +96,20 @@ def get_exceed_area_stocks(current_report_date, query_num, exceed_multiple_confi
     print_debug(f"- 超预期倍数范围: {exceed_multiple_low}~{exceed_multiple_high}倍")
     print_debug(f"- 返回记录数限制: {query_num}")
     
-    # 检查数据可用性
-    db_manager.execute("SELECT COUNT(*) FROM stock_report WHERE report_date = %s", (current_report_date,))
-    current_report_count = db_manager.fetchone()[0]
-    print_debug(f"实际业绩报告数量: {current_report_count}")
+    # # 检查数据可用性
+    # db_manager.execute("SELECT COUNT(*) FROM stock_report WHERE report_date = %s", (current_report_date,))
+    # current_report_count = db_manager.fetchone()[0]
+    # print_debug(f"实际业绩报告数量: {current_report_count}")
     
-    db_manager.execute("SELECT COUNT(*) FROM stock_prereport WHERE report_date = %s AND predict_indicator = '净利润'", (prev_period_date,))
-    prereport_count = db_manager.fetchone()[0]
-    print_debug(f"上期业绩预告数量: {prereport_count}")
+    # db_manager.execute("SELECT COUNT(*) FROM stock_prereport WHERE report_date = %s", (prev_period_date,))
+    # prereport_count = db_manager.fetchone()[0]
+    # print_debug(f"上期业绩预告数量: {prereport_count}")
     
-    if current_report_count == 0 or prereport_count == 0:
-        print_debug(f"数据不足，无法进行超预期分析")
-        print_debug(f"当期业绩({current_report_date}): {current_report_count}条")
-        print_debug(f"上期预告({prev_period_date}): {prereport_count}条")
-        return [], current_report_date
+    # if current_report_count == 0 or prereport_count == 0:
+    #     print_debug(f"数据不足，无法进行超预期分析")
+    #     print_debug(f"当期业绩({current_report_date}): {current_report_count}条")
+    #     print_debug(f"上期预告({prev_period_date}): {prereport_count}条")
+    #     return [], current_report_date
     
     # 获取当期业绩报告数据，每个股票取净利润最高的一条记录
     current_report_sql = """
@@ -290,7 +240,7 @@ def get_high_change_stocks(report_date, config):
     params.append(query_num)
     
     final_sql = db_manager.cursor.mogrify(sql, tuple(params))
-    print_debug(f"执行SQL:\n{final_sql}")
+    # print_debug(f"执行SQL:\n{final_sql}")
     
     db_manager.execute(sql, tuple(params))
     results = db_manager.fetchall()
@@ -358,14 +308,15 @@ def main():
         print(f"预报业绩分析期: {prereport_date}")
         print(f"超预期分析期: {exceed_date}")
         
-        if not check_data_availability(prereport_date):
-            print(f"未找到 {prereport_date} 的预告数据")
-            return
+        # if not check_data_availability(prereport_date):
+        #     print(f"未找到 {prereport_date} 的预告数据")
+        #     return
             
-        # 获取股票数据并添加资金流信息
+        # 预报业绩变动
         high_change_stocks = get_high_change_stocks(prereport_date, config)
         high_change_stocks_with_fund = add_fund_flow_data(high_change_stocks)
         
+        # 实际业绩报告
         exceed_area_stocks, _ = get_exceed_area_stocks(exceed_date, config['queryNum'], config['exceedMultiple'])
         exceed_area_stocks_with_fund = add_fund_flow_data(exceed_area_stocks)
             
