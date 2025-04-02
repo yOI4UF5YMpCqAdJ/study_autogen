@@ -10,6 +10,7 @@ from akShare.db.report.main_report import process_report_data
 from akShare.db.pre.main_preReport import process_preReport_data
 from akShare.log.logger import setup_logger
 from akShare.analyse.date_utils import get_next_quarter_end, get_prev_quarter_end
+from akShare.analyse.generate_report import main as generate_report_main
 
 # 设置日志记录器
 logger = setup_logger('xxlJobRun')
@@ -69,6 +70,10 @@ def process_daily_report(date=None):
         except Exception as e:
             logger.error(f"业绩预告数据处理出错: {e}")
             prereport_result = False
+        
+        # 生成分析报告
+        logger.info("=== 生成分析报告 ===")
+        generate_report_main()
         
         return report_result, prereport_result
         

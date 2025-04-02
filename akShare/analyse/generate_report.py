@@ -348,7 +348,8 @@ def main():
             prev_period_date=prev_period_date,
             high_change_stocks=high_change_stocks_with_fund,
             exceed_area_stocks=exceed_area_stocks_with_fund,
-            exceed_area_report_info=report_info
+            exceed_area_report_info=report_info,
+            query_date=config['queryDate']  # 传递queryDate配置
         )
         
         print(f"\n报告生成完成")

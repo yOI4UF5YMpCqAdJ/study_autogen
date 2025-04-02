@@ -7,7 +7,7 @@ def format_number(number):
         return "0"
     return format(number / 10000, ',.2f')
 
-def generate_html_report(prereport_date, exceed_date, prev_period_date, high_change_stocks, exceed_area_stocks, exceed_area_report_info=None):
+def generate_html_report(prereport_date, exceed_date, prev_period_date, high_change_stocks, exceed_area_stocks, exceed_area_report_info=None, query_date='auto'):
     """生成HTML报告"""
     template_path = os.path.join(os.path.dirname(__file__), 'performance_analysis.html')
     with open(template_path, 'r', encoding='utf-8') as f:
@@ -284,8 +284,14 @@ def generate_html_report(prereport_date, exceed_date, prev_period_date, high_cha
         1
     )
     
-    # 使用prereport_date作为文件名中的日期
-    filename = f"performance_analysis_{prereport_date}.html"
+    # 根据query_date决定使用当前日期还是预告日期
+    if query_date.lower() == 'auto':
+        # auto模式使用当前日期
+        current_date = datetime.now().strftime("%Y%m%d")
+        filename = f"performance_analysis_{current_date}.html"
+    else:
+        # 非auto模式使用预告日期
+        filename = f"performance_analysis_{prereport_date}.html"
     output_path = os.path.join(os.path.dirname(__file__), 'htmls', filename)
     
     with open(output_path, 'w', encoding='utf-8') as f:
