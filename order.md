@@ -95,5 +95,5 @@ generate_report中get_target_report_dates有问题。如果query_date不是是au
 
 xxlJobRun.py 中，当process_daily_report执行后，调用generate_report.py的main函数执行
 
-
+我需要发布xxljboRun发布到服务器上，需要相同的文件目录结构和必要的文件，请先看下deploy.bat和run_stock_job.bat。然后添加必要的脚本到deploy.bat
 

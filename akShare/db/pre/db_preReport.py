@@ -5,6 +5,7 @@ import pymysql
 from datetime import datetime
 import sys
 import os
+import logging
 sys.path.append(os.path.join(os.path.dirname(__file__), "../.."))
 from db.db_manager import db_manager
 
@@ -24,33 +25,32 @@ def create_stock_preReport_table(stock_yjyg_em_df=None, report_date=None, force_
     try:
         # 如果未提供数据，则尝试获取
         if stock_yjyg_em_df is None:
-            # 调用akshare函数获取数据
-            print("错误：未提供数据")
+            logging.error("错误：未提供数据")
             return False
         
         # 检查是否有数据返回
         if stock_yjyg_em_df.empty:
-            print("没有获取到数据，请检查日期参数或稍后再试")
+            logging.info("没有获取到数据，请检查日期参数或稍后再试")
             return False
         
         # 连接到数据库
         if not db_manager.connect():
-            print("数据库连接失败")
+            logging.error("数据库连接失败")
             return False
         
         # 删除表（如果已存在且需要重新创建）
         if force_recreate:
-            print("删除旧表（如果存在）...")
+            logging.info("删除旧表（如果存在）...")
             db_manager.execute("DROP TABLE IF EXISTS stock_preReport")
         else:
             # 检查表是否存在
             db_manager.execute("SHOW TABLES LIKE 'stock_preReport'")
             table_exists = db_manager.fetchone()
             if table_exists:
-                print("表 stock_preReport 已存在，不再重新创建")
+                logging.info("表 stock_preReport 已存在，不再重新创建")
                 return True
         
-        print("创建新表 stock_preReport...")
+        logging.info("创建新表 stock_preReport...")
         
         # 创建表SQL语句
         create_table_sql = """
@@ -77,18 +77,18 @@ def create_stock_preReport_table(stock_yjyg_em_df=None, report_date=None, force_
         
         db_manager.execute(create_table_sql)
         
-        print("表创建成功！表结构如下：")
+        logging.info("表创建成功！表结构如下：")
         db_manager.execute("DESCRIBE stock_preReport")
         for field in db_manager.fetchall():
-            print(field)
+            logging.info(str(field))
         
         db_manager.commit()
         
-        print("\n表 stock_preReport 已成功创建！")
+        logging.info("表 stock_preReport 已成功创建！")
         return True
         
     except Exception as e:
-        print(f"表创建过程中发生错误: {e}")
+        logging.error(f"表创建过程中发生错误: {e}")
         return False
 
 def create_preReport_header_table(force_recreate=True, report_date="20250331"):
@@ -104,15 +104,14 @@ def create_preReport_header_table(force_recreate=True, report_date="20250331"):
         str: 当前报告日期
     """
     try:
-        
         # 连接到数据库
         if not db_manager.connect():
-            print("数据库连接失败")
+            logging.error("数据库连接失败")
             return False, None
         
         # 判断是否需要重新创建表
         if force_recreate:
-            print("删除头表（如果存在）...")
+            logging.info("删除头表（如果存在）...")
             db_manager.execute("DROP TABLE IF EXISTS stock_prereport_header")
             
         # 检查表是否存在
@@ -121,7 +120,7 @@ def create_preReport_header_table(force_recreate=True, report_date="20250331"):
         
         # 如果表不存在，则创建
         if not table_exists or force_recreate:
-            print("创建头表 stock_prereport_header...")
+            logging.info("创建头表 stock_prereport_header...")
             
             # 创建表SQL语句
             create_table_sql = """
@@ -139,28 +138,28 @@ def create_preReport_header_table(force_recreate=True, report_date="20250331"):
             """
             
             db_manager.execute(create_table_sql)
-            print("头表 stock_prereport_header 创建成功！")
+            logging.info("头表 stock_prereport_header 创建成功！")
         
         # 插入新的批次记录
-        print(f"创建新记录: {report_date}")
+        logging.info(f"创建新记录: {report_date}")
         insert_sql = """
         INSERT INTO stock_prereport_header 
         (report_date, query_param, status) 
         VALUES (%s, %s, %s)
         """
         
-        query_param = f"date={report_date}"  # 使用传入的report_date参数
+        query_param = f"date={report_date}"
         status = "PENDING"
         
         db_manager.execute(insert_sql, (report_date, query_param, status))
         db_manager.commit()
         
-        print("头表记录创建成功！")
+        logging.info("头表记录创建成功！")
         
         return True, report_date
         
     except Exception as e:
-        print(f"创建头表时发生错误: {e}")
+        logging.error(f"创建头表时发生错误: {e}")
         return False, None
         
     finally:
@@ -178,7 +177,7 @@ def check_existing_query(date_str):
     """
     try:
         if not db_manager.connect():
-            print("数据库连接失败")
+            logging.error("数据库连接失败")
             return False
             
         check_sql = """
@@ -192,7 +191,7 @@ def check_existing_query(date_str):
         return count > 0
         
     except Exception as e:
-        print(f"检查查询时间时发生错误: {e}")
+        logging.error(f"检查查询时间时发生错误: {e}")
         return False
         
     finally:
@@ -210,7 +209,7 @@ def delete_preReport_detail_by_date(date_str):
     """
     try:
         if not db_manager.connect():
-            print("数据库连接失败")
+            logging.error("数据库连接失败")
             return False
             
         # 直接删除日期对应的子表数据
@@ -221,11 +220,11 @@ def delete_preReport_detail_by_date(date_str):
         db_manager.execute(delete_sql, (date_str,))
         
         db_manager.commit()
-        print(f"成功删除日期参数 {date_str} 的子表数据")
+        logging.info(f"成功删除日期参数 {date_str} 的子表数据")
         return True
         
     except Exception as e:
-        print(f"删除子表数据时发生错误: {e}")
+        logging.error(f"删除子表数据时发生错误: {e}")
         return False
         
     finally:
@@ -243,7 +242,7 @@ def get_existing_preReport_data(date_str):
     """
     try:
         if not db_manager.connect():
-            print("数据库连接失败")
+            logging.error("数据库连接失败")
             return []
             
         select_sql = """
@@ -272,7 +271,7 @@ def get_existing_preReport_data(date_str):
         return existing_data
         
     except Exception as e:
-        print(f"获取已存在数据时发生错误: {e}")
+        logging.error(f"获取已存在数据时发生错误: {e}")
         return []
         
     finally:
@@ -309,7 +308,7 @@ def update_header_status(report_date, record_count, status="COMPLETED", remark=N
     """
     try:
         if not db_manager.connect():
-            print("数据库连接失败")
+            logging.error("数据库连接失败")
             return False
             
         update_sql = """
@@ -321,11 +320,11 @@ def update_header_status(report_date, record_count, status="COMPLETED", remark=N
         db_manager.execute(update_sql, (record_count, status, remark, report_date))
         db_manager.commit()
         
-        print(f"头表状态更新成功！报告日期: {report_date}, 状态: {status}, 记录数: {record_count}")
+        logging.info(f"头表状态更新成功！报告日期: {report_date}, 状态: {status}, 记录数: {record_count}")
         return True
         
     except Exception as e:
-        print(f"更新头表状态时发生错误: {e}")
+        logging.error(f"更新头表状态时发生错误: {e}")
         return False
         
     finally:
@@ -346,20 +345,19 @@ def insert_preReport_data(stock_yjyg_em_df=None, report_date=None):
     try:
         # 如果未提供数据，则尝试获取
         if stock_yjyg_em_df is None:
-            # 调用akshare函数获取数据
-            print("错误：未提供数据")
+            logging.error("错误：未提供数据")
             return False, 0
         
         # 检查是否有数据返回
         if stock_yjyg_em_df.empty:
-            print("没有获取到数据，请检查日期参数或稍后再试")
+            logging.info("没有获取到数据，请检查日期参数或稍后再试")
             return False, 0
         
-        print(f"准备插入{len(stock_yjyg_em_df)}条业绩预告数据")
+        logging.info(f"准备插入{len(stock_yjyg_em_df)}条业绩预告数据")
         
         # 连接到数据库
         if not db_manager.connect():
-            print("数据库连接失败")
+            logging.error("数据库连接失败")
             return False, 0
         
         # 准备批量插入数据
@@ -367,14 +365,14 @@ def insert_preReport_data(stock_yjyg_em_df=None, report_date=None):
         
         # 验证报告日期是否存在
         if report_date is None:
-            print("错误：未提供报告日期")
+            logging.error("错误：未提供报告日期")
             return False, 0
         
         # 检查头表中是否存在该报告日期
         check_sql = "SELECT 1 FROM stock_prereport_header WHERE report_date = %s"
         db_manager.execute(check_sql, (report_date,))
         if not db_manager.fetchone():
-            print(f"错误：报告日期 {report_date} 在头表中不存在")
+            logging.error(f"错误：报告日期 {report_date} 在头表中不存在")
             return False, 0
             
         for _, row in stock_yjyg_em_df.iterrows():
@@ -421,21 +419,21 @@ def insert_preReport_data(stock_yjyg_em_df=None, report_date=None):
         
         # 提交事务
         db_manager.commit()
-        print(f"成功插入{insert_count}条数据到stock_preReport表")
+        logging.info(f"成功插入{insert_count}条数据到stock_preReport表")
         
         return True, insert_count
         
     except Exception as e:
-        print(f"插入数据时发生错误: {e}")
+        logging.error(f"插入数据时发生错误: {e}")
         return False, 0
 
 if __name__ == "__main__":
     # 测试创建头表和插入记录
     success, report_date = create_preReport_header_table()
     if success and report_date:
-        print(f"成功创建头表和记录，报告日期: {report_date}")
+        logging.info(f"成功创建头表和记录，报告日期: {report_date}")
         
         # 测试更新状态
         update_success = update_header_status(report_date, 100, "COMPLETED", "测试完成")
         if update_success:
-            print("成功更新头表状态")
+            logging.info("成功更新头表状态")

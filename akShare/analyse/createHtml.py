@@ -1,5 +1,6 @@
 import os
 from datetime import datetime
+import logging
 
 def format_number(number):
     """格式化数字为万元"""
@@ -9,7 +10,10 @@ def format_number(number):
 
 def generate_html_report(prereport_date, exceed_date, prev_period_date, high_change_stocks, exceed_area_stocks, exceed_area_report_info=None, query_date='auto'):
     """生成HTML报告"""
+    logging.info("开始生成HTML报告...")
     template_path = os.path.join(os.path.dirname(__file__), 'performance_analysis.html')
+    logging.info(f"使用模板文件：{template_path}")
+    
     with open(template_path, 'r', encoding='utf-8') as f:
         html_content = f.read()
     
@@ -17,6 +21,7 @@ def generate_html_report(prereport_date, exceed_date, prev_period_date, high_cha
     formatted_exceed_date = f"{exceed_date[:4]}年{exceed_date[4:6]}月{exceed_date[6:]}日" if exceed_date else "无可用数据"
     formatted_prev_date = f"{prev_period_date[:4]}年{prev_period_date[4:6]}月{prev_period_date[6:]}日"
     
+    logging.info("替换表格标题中的日期...")
     # 替换表格标题中的日期
     html_content = html_content.replace(
         '<h2 class="section-title">业绩预告变动</h2>',
@@ -43,6 +48,7 @@ def generate_html_report(prereport_date, exceed_date, prev_period_date, high_cha
         ''
     )
     
+    logging.info("添加CSS样式和JavaScript代码...")
     # 生成CSS样式和JavaScript代码
     additional_styles = """
     <style>
@@ -165,6 +171,7 @@ def generate_html_report(prereport_date, exceed_date, prev_period_date, high_cha
     # 添加新样式和JavaScript
     html_content = html_content.replace('</head>', f'{additional_styles}\n</head>')
 
+    logging.info("生成业绩变动股票数据行...")
     high_change_rows = ""
     for stock in high_change_stocks:
         change_class = "positive-change" if float(stock['3']) > 0 else "negative-change"
@@ -221,6 +228,7 @@ def generate_html_report(prereport_date, exceed_date, prev_period_date, high_cha
             </tr>
             """
     
+    logging.info("生成业绩超预期股票数据行...")
     exceed_rows = ""
     for stock in exceed_area_stocks:
         exceed_rate = float(stock['4'])
@@ -273,6 +281,7 @@ def generate_html_report(prereport_date, exceed_date, prev_period_date, high_cha
             </tr>
             """
     
+    logging.info("替换表格内容...")
     html_content = html_content.replace(
         '<!-- 数据将通过Python脚本动态生成 -->', 
         high_change_rows if high_change_stocks else "<tr><td colspan='9'>没有找到符合条件的数据</td></tr>", 
@@ -294,7 +303,9 @@ def generate_html_report(prereport_date, exceed_date, prev_period_date, high_cha
         filename = f"performance_analysis_{prereport_date}.html"
     output_path = os.path.join(os.path.dirname(__file__), 'htmls', filename)
     
+    logging.info(f"写入HTML文件到: {output_path}")
     with open(output_path, 'w', encoding='utf-8') as f:
         f.write(html_content)
     
+    logging.info("HTML报告生成完成")
     return output_path
