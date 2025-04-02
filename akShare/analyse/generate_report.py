@@ -32,7 +32,7 @@ def load_config():
 
 def print_debug(msg):
     """打印调试信息"""
-    print(f"DEBUG: {msg}")
+    print(msg)  # 移除DEBUG前缀
 
 def get_prev_period_date(current_date):
     """获取上一期的日期"""
@@ -65,15 +65,13 @@ def get_target_report_dates(query_date):
         prereport_date = query_date
         exceed_date = get_prev_period_date(query_date)
     
-    print_debug(f"目标日期确定:")
-    print_debug(f"- 预告业绩分析日期: {prereport_date}")
-    print_debug(f"- 超预期分析当期日期: {exceed_date}")
+    print("\n=== 目标日期确定 ===")
+    print(f"- 预告业绩分析日期: {prereport_date}")
+    print(f"- 超预期分析当期日期: {exceed_date}")
     return prereport_date, exceed_date
 
 def check_data_availability(date):
     """检查指定日期的数据是否可用"""
-    print_debug(f"检查 {date} 的数据可用性")
-    
     sql = """
     SELECT COUNT(DISTINCT stock_code) FROM stock_prereport WHERE report_date = %s
     """
@@ -82,42 +80,34 @@ def check_data_availability(date):
     result = db_manager.fetchone()
     count = result[0] if result else 0
     
-    print_debug(f"预告数据数量: {count}")
     return count > 0
 
 def get_exceed_area_stocks(current_report_date, query_num, exceed_multiple_config):
-    """获取业绩超预期的股票"""
-    print_debug(f"执行业绩超预期分析:")
+    """获取业绩超预期的股票
+    Returns:
+        tuple: (exceed_stocks, actual_report_date, report_info)
+        - exceed_stocks: 超预期股票列表
+        - actual_report_date: 实际使用的业绩报告期
+        - report_info: 期间信息字典
+    """
+    print("\n=== 业绩超预期分析 ===")
+    print("分析参数:")
     prev_period_date = get_prev_period_date(current_report_date)
-    print_debug(f"- 当期业绩期: {current_report_date}")
-    print_debug(f"- 上期预告期: {prev_period_date}")
+    prev_prev_period_date = get_prev_period_date(prev_period_date)
+    
     exceed_multiple_low = exceed_multiple_config['low']
     exceed_multiple_high = exceed_multiple_config['high']
-    print_debug(f"- 超预期倍数范围: {exceed_multiple_low}~{exceed_multiple_high}倍")
-    print_debug(f"- 返回记录数限制: {query_num}")
+    print(f"- 超预期倍数范围: {exceed_multiple_low}~{exceed_multiple_high}倍")
+    print(f"- 返回记录数限制: {query_num}")
     
-    # # 检查数据可用性
-    # db_manager.execute("SELECT COUNT(*) FROM stock_report WHERE report_date = %s", (current_report_date,))
-    # current_report_count = db_manager.fetchone()[0]
-    # print_debug(f"实际业绩报告数量: {current_report_count}")
-    
-    # db_manager.execute("SELECT COUNT(*) FROM stock_prereport WHERE report_date = %s", (prev_period_date,))
-    # prereport_count = db_manager.fetchone()[0]
-    # print_debug(f"上期业绩预告数量: {prereport_count}")
-    
-    # if current_report_count == 0 or prereport_count == 0:
-    #     print_debug(f"数据不足，无法进行超预期分析")
-    #     print_debug(f"当期业绩({current_report_date}): {current_report_count}条")
-    #     print_debug(f"上期预告({prev_period_date}): {prereport_count}条")
-    #     return [], current_report_date
-    
-    # 获取当期业绩报告数据，每个股票取净利润最高的一条记录
-    current_report_sql = """
+    # 获取业绩报告数据SQL模板，每个股票取净利润最高的一条记录
+    report_sql = """
     WITH StockProfit AS (
         SELECT 
             stock_code,
             stock_name,
             net_profit as actual_profit,
+            notice_date,
             ROW_NUMBER() OVER(PARTITION BY stock_code ORDER BY net_profit DESC) as rn
         FROM stock_report 
         WHERE report_date = %s
@@ -125,12 +115,13 @@ def get_exceed_area_stocks(current_report_date, query_num, exceed_multiple_confi
     SELECT 
         stock_code,
         stock_name,
-        actual_profit
+        actual_profit,
+        notice_date
     FROM StockProfit
     WHERE rn = 1
     """
     
-    # 获取上期预告数据，每个股票取预测值最高的一条记录
+    # 获取预告数据SQL模板，每个股票取预测值最高的一条记录
     prereport_sql = """
     WITH StockPredict AS (
         SELECT 
@@ -155,46 +146,90 @@ def get_exceed_area_stocks(current_report_date, query_num, exceed_multiple_confi
     
     try:
         # 获取当期业绩数据
-        db_manager.execute(current_report_sql, (current_report_date,))
-        current_reports = {row[0]: row for row in db_manager.fetchall()}  # 使用股票代码作为key
+        db_manager.execute(report_sql, (current_report_date,))
+        current_reports = {row[0]: row for row in db_manager.fetchall()}
         
-        # 获取预告数据
-        db_manager.execute(prereport_sql, (prev_period_date,))
-        prereports = {row[0]: row for row in db_manager.fetchall()}  # 使用股票代码作为key
+        # 如果当期没有数据，获取上期数据
+        actual_report_date = current_report_date
+        if not current_reports:
+            print(f"\n当期({current_report_date})没有业绩数据，使用上期数据")
+            db_manager.execute(report_sql, (prev_period_date,))
+            current_reports = {row[0]: row for row in db_manager.fetchall()}
+            actual_report_date = prev_period_date
+            
+        if not current_reports:
+            print("\n当期和上期都没有业绩数据")
+            return [], None
+            
+        # 根据实际使用的业绩报告期获取对应的预告数据
+        current_prereport_date = actual_report_date
+        prev_prereport_date = get_prev_period_date(actual_report_date)
+        
+        # 获取当期预告数据
+        db_manager.execute(prereport_sql, (current_prereport_date,))
+        current_prereports = {row[0]: row for row in db_manager.fetchall()}
+        
+        # 获取上期预告数据
+        db_manager.execute(prereport_sql, (prev_prereport_date,))
+        prev_prereports = {row[0]: row for row in db_manager.fetchall()}
+        
+        print("\n数据周期:")
+        print(f"- 业绩报告期: {actual_report_date}")
+        print(f"- 当期预告期: {current_prereport_date}, 数据量: {len(current_prereports)}条")
+        print(f"- 上期预告期: {prev_prereport_date}, 数据量: {len(prev_prereports)}条")
         
         # 比较所有股票并计算超预期倍数
         all_exceed_stocks = []
         for stock_code, report in current_reports.items():
-            if stock_code in prereports:
-                prereport = prereports[stock_code]
-                if prereport[2] > 0:  # 只有当预测值大于0时才进行比较
-                    exceed_rate = report[2] / prereport[2]  # actual_profit / predict_value
-                    all_exceed_stocks.append((
-                        stock_code,            # stock_code
-                        report[1],             # stock_name
-                        prereport[2],          # prereport_predict
-                        report[2],             # actual_profit
-                        exceed_rate,           # exceed_rate
-                        prereport[3],          # predict_type
-                        prereport[4]           # predict_indicator
-                    ))
+            prereport = None
+            
+            # 先查找当期预告数据
+            if stock_code in current_prereports:
+                prereport = current_prereports[stock_code]
+            # 如果没有当期预告，则查找上期预告
+            elif stock_code in prev_prereports:
+                prereport = prev_prereports[stock_code]
+            
+            if prereport and prereport[2] > 0:  # 只有当预测值大于0时才进行比较
+                # 记录使用的预告期间
+                used_prereport_date = current_prereport_date if stock_code in current_prereports else prev_prereport_date
+                
+                exceed_rate = report[2] / prereport[2]  # actual_profit / predict_value
+                all_exceed_stocks.append((
+                    stock_code,            # stock_code
+                    report[1],             # stock_name
+                    prereport[2],          # prereport_predict
+                    report[2],             # actual_profit
+                    exceed_rate,           # exceed_rate
+                    prereport[3],          # predict_type
+                    prereport[4],          # predict_indicator
+                    used_prereport_date,   # 预测值对应期间
+                    actual_report_date,    # 实际业绩期间
+                    report[3]              # notice_date
+                ))
         
-        # 按超预期倍数降序排序
-        all_exceed_stocks.sort(key=lambda x: x[4], reverse=True)
+        # 先按公告日期降序排序，再按超预期倍数降序排序
+        all_exceed_stocks.sort(key=lambda x: (x[9], x[4]), reverse=True)
         
         # 筛选在指定倍数范围内的记录，并返回前N条
         exceed_stocks = [stock for stock in all_exceed_stocks if exceed_multiple_low <= stock[4] <= exceed_multiple_high][:query_num]
         
-        print_debug(f"查询返回记录数: {len(exceed_stocks)}")
-        return exceed_stocks, current_report_date
+        print(f"\n查询返回记录数: {len(exceed_stocks)}条")
+        report_info = {
+            'actual_report_date': actual_report_date,
+            'current_prereport_date': current_prereport_date,
+            'prev_prereport_date': prev_prereport_date
+        }
+        return exceed_stocks, actual_report_date, report_info
         
     except Exception as e:
         print(f"执行SQL出错: {e}")
-        return [], None
+        return [], None, None
 
 def get_high_change_stocks(report_date, config):
     """获取业绩变动超过指定倍数的股票"""
-    print_debug(f"查询 {report_date} 的高变动股票")
+    print(f"\n=== 业绩预告高变动分析 ===")
+    print(f"分析期: {report_date}")
     
     multiple_low = int(config['multiple']['low'] * 100)
     multiple_high = int(config['multiple']['high'] * 100) if config['multiple']['high'] != -1 else float('inf')
@@ -240,11 +275,10 @@ def get_high_change_stocks(report_date, config):
     params.append(query_num)
     
     final_sql = db_manager.cursor.mogrify(sql, tuple(params))
-    # print_debug(f"执行SQL:\n{final_sql}")
     
     db_manager.execute(sql, tuple(params))
     results = db_manager.fetchall()
-    print_debug(f"找到 {len(results)} 条结果")
+    print(f"查询结果: {len(results)}条记录")
     return results
 
 def get_stock_fund_flow(stock_code):
@@ -263,15 +297,6 @@ def get_stock_fund_flow(stock_code):
             
         # 获取资金流数据
         df = ak.stock_individual_fund_flow(stock=stock_code, market=market)
-        print(f"===== 股票 {stock_code} 资金流数据 =====")
-        print("列名:", df.columns.tolist())
-        print("数据形状:", df.shape)
-        if not df.empty:
-            print("前5条数据:")
-            print(df.sort_values(by='日期', ascending=False).head(5))
-        else:
-            print("警告: 未获取到数据")
-        # 按日期倒序排序并取前5条记录
         return df.sort_values(by='日期', ascending=False).head(5)
     except Exception as e:
         print(f"获取股票 {stock_code} 资金流数据失败: {e}")
@@ -291,7 +316,6 @@ def add_fund_flow_data(stocks: List[Tuple]) -> List[Dict[str, Any]]:
 def main():
     try:
         config = load_config()
-        print_debug(f"加载配置: {config}")
         
         if not db_manager.connect():
             print("数据库连接失败")
@@ -302,39 +326,32 @@ def main():
             print("无法确定目标报告期")
             return
             
-        print(f"\n=== 分析日期确定 ===")
+        print("\n=== 分析日期概览 ===")
         print(f"当前日期: {datetime.now().strftime('%Y-%m-%d')}")
         print(f"配置日期: {config['queryDate']}")
         print(f"预报业绩分析期: {prereport_date}")
         print(f"超预期分析期: {exceed_date}")
-        
-        # if not check_data_availability(prereport_date):
-        #     print(f"未找到 {prereport_date} 的预告数据")
-        #     return
-            
+    
         # 预报业绩变动
         high_change_stocks = get_high_change_stocks(prereport_date, config)
         high_change_stocks_with_fund = add_fund_flow_data(high_change_stocks)
         
         # 实际业绩报告
-        exceed_area_stocks, _ = get_exceed_area_stocks(exceed_date, config['queryNum'], config['exceedMultiple'])
+        exceed_area_stocks, actual_report_date, report_info = get_exceed_area_stocks(exceed_date, config['queryNum'], config['exceedMultiple'])
         exceed_area_stocks_with_fund = add_fund_flow_data(exceed_area_stocks)
-            
-        print(f"\n=== 数据分析报告 ===")
-        print(f"业绩预告分析期: {prereport_date}")
-        print(f"超预期分析期: {exceed_date if exceed_date else '无可用数据'}")
         
-        prev_period_date = get_prev_period_date(exceed_date)
+        prev_period_date = get_prev_period_date(actual_report_date if actual_report_date else exceed_date)
         # 使用新的HTML生成模块
         output_path = createHtml.generate_html_report(
             prereport_date=prereport_date,
-            exceed_date=exceed_date,
+            exceed_date=actual_report_date if actual_report_date else exceed_date,
             prev_period_date=prev_period_date,
             high_change_stocks=high_change_stocks_with_fund,
-            exceed_area_stocks=exceed_area_stocks_with_fund
+            exceed_area_stocks=exceed_area_stocks_with_fund,
+            exceed_area_report_info=report_info
         )
         
-        print(f"\n报告生成完成！")
+        print(f"\n报告生成完成")
         print(f"报告保存路径: {output_path}")
         
     except Exception as e:

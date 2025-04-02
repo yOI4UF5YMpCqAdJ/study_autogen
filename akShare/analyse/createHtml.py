@@ -7,7 +7,7 @@ def format_number(number):
         return "0"
     return format(number / 10000, ',.2f')
 
-def generate_html_report(prereport_date, exceed_date, prev_period_date, high_change_stocks, exceed_area_stocks):
+def generate_html_report(prereport_date, exceed_date, prev_period_date, high_change_stocks, exceed_area_stocks, exceed_area_report_info=None):
     """生成HTML报告"""
     template_path = os.path.join(os.path.dirname(__file__), 'performance_analysis.html')
     with open(template_path, 'r', encoding='utf-8') as f:
@@ -23,9 +23,18 @@ def generate_html_report(prereport_date, exceed_date, prev_period_date, high_cha
         f'<h2 class="section-title">业绩预告变动<span class="date-info">业绩预告分析期: {formatted_prereport_date}</span></h2>'
     )
     
+    exceed_area_dates = ""
+    if exceed_area_report_info:
+        exceed_area_dates = f"""
+        <span class="date-info">
+            实际业绩期: {formatted_exceed_date}<br>
+            当期预测期: {exceed_area_report_info['current_prereport_date'][:4]}年{exceed_area_report_info['current_prereport_date'][4:6]}月{exceed_area_report_info['current_prereport_date'][6:]}日<br>
+            上期预测期: {exceed_area_report_info['prev_prereport_date'][:4]}年{exceed_area_report_info['prev_prereport_date'][4:6]}月{exceed_area_report_info['prev_prereport_date'][6:]}日
+        </span>
+        """
     html_content = html_content.replace(
         '<h2 class="section-title">业绩预告超预期股票</h2>',
-        f'<h2 class="section-title">业绩超预期<span class="date-info">当期业绩期: {formatted_exceed_date}, 上期预测期: {formatted_prev_date}</span></h2>'
+        f'<h2 class="section-title">业绩超预期{exceed_area_dates}</h2>'
     )
     
     # 移除原有的日期显示区域
@@ -219,11 +228,12 @@ def generate_html_report(prereport_date, exceed_date, prev_period_date, high_cha
         <tr class="stock-main-row">
             <td data-label="股票代码"><a href="https://stockpage.10jqka.com.cn/{stock['0']}/" target="_blank" class="stock-link">{stock['0']}</a></td>
             <td data-label="股票名称"><a href="https://stockpage.10jqka.com.cn/{stock['0']}/" target="_blank" class="stock-link">{stock['1']}</a></td>
-            <td data-label="上期预测值(万元)">{format_number(stock['2'])}</td>
-            <td data-label="本期实际净利润(万元)">{format_number(stock['3'])}</td>
+            <td data-label="上期预测值(万元)">{format_number(stock['2'])} ({stock['7'][:4]}年{stock['7'][4:6]}月)</td>
+            <td data-label="本期实际净利润(万元)">{format_number(stock['3'])} ({stock['8'][:4]}年{stock['8'][4:6]}月)</td>
             <td data-label="超预期倍数" class="positive-change">{exceed_rate:.2f}倍</td>
             <td data-label="预告类型" class="small-text">{stock['5'] or ''}</td>
             <td data-label="预测指标">{stock['6']}</td>
+            <td data-label="公告日期">{stock['9']}</td>
         </tr>
         """
         
@@ -231,12 +241,12 @@ def generate_html_report(prereport_date, exceed_date, prev_period_date, high_cha
         if fund_flow is not None and not fund_flow.empty:
             exceed_rows += f"""
             <tr class="fund-flow-header">
-                <td colspan="7" onclick="toggleFundFlow('{stock['0']}')">
+                <td colspan="8" onclick="toggleFundFlow('{stock['0']}')">
                     最近5日资金流向（万元）
                 </td>
             </tr>
             <tr>
-                <td colspan="7" style="padding: 0;">
+                <td colspan="8" style="padding: 0;">
                     <table class="nested-table" data-stock="{stock['0']}">
                         <tr class="fund-flow-data-header">
                             <td>日期</td>
@@ -270,12 +280,12 @@ def generate_html_report(prereport_date, exceed_date, prev_period_date, high_cha
     )
     html_content = html_content.replace(
         '<!-- 数据将通过Python脚本动态生成 -->', 
-        exceed_rows if exceed_area_stocks else "<tr><td colspan='7'>没有找到符合条件的数据</td></tr>", 
+        exceed_rows if exceed_area_stocks else "<tr><td colspan='8'>没有找到符合条件的数据</td></tr>", 
         1
     )
     
-    current_date = datetime.now().strftime("%Y%m%d")
-    filename = f"performance_analysis_{current_date}.html"
+    # 使用prereport_date作为文件名中的日期
+    filename = f"performance_analysis_{prereport_date}.html"
     output_path = os.path.join(os.path.dirname(__file__), 'htmls', filename)
     
     with open(output_path, 'w', encoding='utf-8') as f:
