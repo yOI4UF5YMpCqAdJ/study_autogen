@@ -150,13 +150,6 @@ def process_preReport_data(date="20250331"):
         if not status_updated:
             logging.warning("警告: 更新头表状态失败，但数据处理已完成")
         
-        # 展示表结构
-        # print("\n表 stock_preReport 的结构：")
-        # db_manager.connect()
-        # db_manager.execute("DESCRIBE stock_preReport")
-        # for field in db_manager.fetchall():
-        #     print(field)
-        
         db_manager.close()
         
         logging.info("数据处理完成！")
@@ -169,4 +162,3 @@ def process_preReport_data(date="20250331"):
 
 if __name__ == "__main__":
     process_preReport_data(date="20250331")
-# 20200630

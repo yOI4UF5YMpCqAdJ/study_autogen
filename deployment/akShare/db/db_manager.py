@@ -2,6 +2,7 @@ import pymysql
 import os
 from dotenv import load_dotenv
 import pathlib
+import logging
 
 class DBManager:
     """
@@ -75,7 +76,7 @@ class DBManager:
             self.cursor = self.conn.cursor()
             return True
         except Exception as e:
-            print(f"数据库连接出错: {e}")
+            logging.error(f"数据库连接出错: {e}")
             return False
     
     def close(self):
@@ -102,7 +103,7 @@ class DBManager:
                 self.cursor.execute(sql)
             return True
         except Exception as e:
-            print(f"执行SQL出错: {e}")
+            logging.error(f"执行SQL出错: {e}")
             return False
     
     def executemany(self, sql, params_list):
@@ -115,7 +116,7 @@ class DBManager:
             self.cursor.executemany(sql, params_list)
             return True
         except Exception as e:
-            print(f"批量执行SQL出错: {e}")
+            logging.error(f"批量执行SQL出错: {e}")
             return False
     
     def fetchall(self):
