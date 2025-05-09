@@ -6,12 +6,27 @@ from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_core import CancellationToken
 import asyncio
 
+# class Person():
+#     def __init__(self,**info):
+#         self.name = info.pName
+#         self.age = info.pAge
+#     def __str__(self):
+#         return f"Person(name='{self.name}', age={self.age}, phone={self.phone})"
+#     name:str
+#     age:int
+#     phone:list[str] = []
 
+
+# def test():
+#     info = {"pName":"w","pAge":20}
+#     p = Person(**info)
+#     # p = Person(pName='w',pAge=18)
+#     p2 =  Person(pName='s',pAge=33)
+#     p2.phone.append("11")
+
+#     print(p)
 
 async def main()->None:
-
-
- 
     agent = AssistantAgent(
         name="crawlerAgent",
         model_client= OpenAIChatCompletionClient(
@@ -31,6 +46,7 @@ async def main()->None:
     print(response)
 
 if __name__ == '__main__':
+    # test()
     asyncio.run(main())
 
 
